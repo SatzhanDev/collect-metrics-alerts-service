@@ -6,6 +6,12 @@ type MetricsService struct {
 	storage repository.Storage
 }
 
+func NewMetricsService(storage repository.Storage) *MetricsService {
+	return &MetricsService{
+		storage: storage,
+	}
+}
+
 func UpdateGauge(name string, value float64) error {
 	return nil
 }
