@@ -28,7 +28,7 @@ func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	path := strings.Trim(r.URL.Path, "/")
 	parts := strings.Split(path, "/")
-	if parts[0] != "update" || len(parts) < 4 {
+	if parts[0] != "update" || len(parts) != 4 {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -53,7 +53,10 @@ func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.svc.UpdateGauge(name, value)
+		if err := h.svc.UpdateGauge(name, value); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 	if mType == models.Counter {
 		delta, err := strconv.ParseInt(valueStr, 10, 64)
@@ -61,7 +64,10 @@ func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		h.svc.UpdateCounter(name, delta)
+		if err := h.svc.UpdateCounter(name, delta); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 
