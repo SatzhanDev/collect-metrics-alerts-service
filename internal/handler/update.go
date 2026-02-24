@@ -20,7 +20,8 @@ func NewMetricsHandler(svc service.Service) *MetricsHandler {
 }
 
 func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	// log.Println("HANDLER HIT:", r.Method, r.URL.Path)
+	// log.Println("RECEIVED:", r.Method, r.URL.Path)
+
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		w.WriteHeader(http.StatusMethodNotAllowed)
