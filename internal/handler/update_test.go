@@ -29,6 +29,13 @@ func (m *mockMetricsService) UpdateCounter(name string, delta int64) error {
 	m.counters[name] += delta
 	return nil
 }
+func (s *mockMetricsService) GetGauge(name string) (float64, error) {
+	return 0, nil
+}
+func (s *mockMetricsService) GetCounter(name string) (int64, error) {
+	return 0, nil
+}
+func (s *mockMetricsService) Snapshot() (gauges map[string]float64, counters map[string]int64)
 
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
