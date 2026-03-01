@@ -10,7 +10,7 @@ type Service interface {
 	UpdateCounter(name string, delta int64) error
 	GetGauge(name string) (float64, error)
 	GetCounter(name string) (int64, error)
-	Snapshot() (gauges map[string]float64, counters map[string]int64)
+	GetAll() (gauges map[string]float64, counters map[string]int64)
 }
 
 func NewMetricsService(storage repository.Storage) Service {
@@ -33,20 +33,20 @@ func (s *MetricsService) UpdateCounter(name string, delta int64) error {
 	return nil
 }
 func (s *MetricsService) GetGauge(name string) (float64, error) {
-	res, err := s.GetGauge(name)
+	res, err := s.storage.GetGauge(name)
 	if err != nil {
 		return 0, err
 	}
 	return res, nil
 }
 func (s *MetricsService) GetCounter(name string) (int64, error) {
-	res, err := s.GetCounter(name)
+	res, err := s.storage.GetCounter(name)
 	if err != nil {
 		return 0, err
 	}
 	return res, nil
 }
 
-func (s *MetricsService) Snapshot() (gauges map[string]float64, counters map[string]int64) {
-	return nil, nil
+func (s *MetricsService) GetAll() (gauges map[string]float64, counters map[string]int64) {
+	return s.storage.GetAll()
 }

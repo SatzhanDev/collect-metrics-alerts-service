@@ -7,18 +7,22 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
+	"github.com/go-chi/chi"
 )
 
 func main() {
 	storage := repository.NewMemStorage()
 	svc := service.NewMetricsService(storage)
 	h := handler.NewMetricsHandler(svc)
-	// mux := http.NewServeMux()
-	// mux.HandleFunc("/", h.Update)
+
+	r := chi.NewRouter()
+	r.Get("/", h.GetList)
+	r.Get("/value/{type}/{name}", h.Value)
+	r.Post("/update/{type}/{name}/{value}", h.Update)
+
 	log.Println("SERVER STARTED on :8080")
-	if err := http.ListenAndServe(":8080", http.HandlerFunc(h.Update)); err != nil {
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)
 	}
 
-	// http.ListenAndServe(":8080", mux)
 }

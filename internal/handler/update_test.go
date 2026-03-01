@@ -35,7 +35,7 @@ func (s *mockMetricsService) GetGauge(name string) (float64, error) {
 func (s *mockMetricsService) GetCounter(name string) (int64, error) {
 	return 0, nil
 }
-func (s *mockMetricsService) Snapshot() (gauges map[string]float64, counters map[string]int64)
+func (s *mockMetricsService) GetAll() (gauges map[string]float64, counters map[string]int64)
 
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()

@@ -5,5 +5,5 @@ type Storage interface {
 	UpdateCounter(name string, delta int64) error
 	GetGauge(name string) (float64, error)
 	GetCounter(name string) (int64, error)
-	Snapshot() (gauges map[string]float64, counters map[string]int64)
+	GetAll() (gauges map[string]float64, counters map[string]int64)
 }
