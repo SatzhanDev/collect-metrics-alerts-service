@@ -5,19 +5,8 @@ import (
 	"strconv"
 
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
-	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
 	"github.com/go-chi/chi"
 )
-
-type MetricsHandler struct {
-	svc service.Service
-}
-
-func NewMetricsHandler(svc service.Service) *MetricsHandler {
-	return &MetricsHandler{
-		svc: svc,
-	}
-}
 
 func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// log.Println("RECEIVED:", r.Method, r.URL.Path)
