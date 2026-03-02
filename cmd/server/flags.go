@@ -6,7 +6,7 @@ type Config struct {
 	Addr string
 }
 
-func ParseFlags() Config {
+func parseFlags() Config {
 	var cfg Config
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "HTTP server address")
 	flag.Parse()
