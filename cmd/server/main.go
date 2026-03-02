@@ -20,8 +20,9 @@ func main() {
 	r.Get("/value/{type}/{name}", h.Value)
 	r.Post("/update/{type}/{name}/{value}", h.Update)
 
-	log.Println("SERVER STARTED on :8080")
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	cfg := ParseFlags()
+	log.Printf("SERVER STARTED on %s", cfg.Addr)
+	if err := http.ListenAndServe(cfg.Addr, r); err != nil {
 		log.Fatal(err)
 	}
 
