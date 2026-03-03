@@ -16,12 +16,12 @@ func main() {
 	go func() {
 		for {
 			a.Poll()
-			time.Sleep(cfg.PollInterval * time.Second)
+			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
 	for {
 		a.Report()
-		time.Sleep(cfg.ReportInterval * time.Second)
+		time.Sleep(cfg.ReportInterval)
 	}
 }

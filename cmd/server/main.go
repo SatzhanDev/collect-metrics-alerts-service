@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -26,12 +27,11 @@ func main() {
 	addr := normalizeAddr(cfg.Addr)
 
 	log.Printf("SERVER STARTED on %s", cfg.Addr)
-	if err := http.ListenAndServe(addr, r); err != nil {
+	if err := http.ListenAndServe(addr, r); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 
 }
-
 func normalizeAddr(in string) string {
 	host, port, err := net.SplitHostPort(in)
 	if err != nil {
