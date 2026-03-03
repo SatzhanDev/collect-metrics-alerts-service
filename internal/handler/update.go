@@ -9,7 +9,7 @@ import (
 )
 
 func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	// log.Println("RECEIVED:", r.Method, r.URL.Path)
+
 	mType := chi.URLParam(r, "type")
 	name := chi.URLParam(r, "name")
 	valueStr := chi.URLParam(r, "value")

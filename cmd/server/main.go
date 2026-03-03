@@ -11,6 +11,8 @@ import (
 )
 
 func main() {
+	cfg := parseFlags()
+
 	storage := repository.NewMemStorage()
 	svc := service.NewMetricsService(storage)
 	h := handler.NewMetricsHandler(svc)
@@ -20,7 +22,6 @@ func main() {
 	r.Get("/value/{type}/{name}", h.Value)
 	r.Post("/update/{type}/{name}/{value}", h.Update)
 
-	cfg := parseFlags()
 	log.Printf("SERVER STARTED on %s", cfg.Addr)
 	if err := http.ListenAndServe(cfg.Addr, r); err != nil {
 		log.Fatal(err)
