@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
@@ -22,9 +23,22 @@ func main() {
 	r.Get("/value/{type}/{name}", h.Value)
 	r.Post("/update/{type}/{name}/{value}", h.Update)
 
+	addr := normalizeAddr(cfg.Addr)
+
 	log.Printf("SERVER STARTED on %s", cfg.Addr)
-	if err := http.ListenAndServe(cfg.Addr, r); err != nil {
+	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatal(err)
 	}
 
+}
+
+func normalizeAddr(in string) string {
+	host, port, err := net.SplitHostPort(in)
+	if err != nil {
+		return in
+	}
+	if host == "localhost" {
+		return ":" + port
+	}
+	return in
 }
