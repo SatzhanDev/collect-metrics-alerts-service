@@ -3,73 +3,43 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"strings"
 
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
-	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
+	"github.com/go-chi/chi"
 )
 
-type MetricsHandler struct {
-	svc service.Service
-}
-
-func NewMetricsHandler(svc service.Service) *MetricsHandler {
-	return &MetricsHandler{
-		svc: svc,
-	}
-}
-
 func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	// log.Println("RECEIVED:", r.Method, r.URL.Path)
 
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	path := strings.Trim(r.URL.Path, "/")
-	parts := strings.Split(path, "/")
-	if parts[0] != "update" || len(parts) != 4 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+	mType := chi.URLParam(r, "type")
+	name := chi.URLParam(r, "name")
+	valueStr := chi.URLParam(r, "value")
 
-	mType := parts[1]
-	name := parts[2]
-	valueStr := parts[3]
-
-	if name == "" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	if mType != models.Counter && mType != models.Gauge {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if mType == models.Gauge {
+	switch mType {
+	case models.Gauge:
 		value, err := strconv.ParseFloat(valueStr, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			http.Error(w, "invalid value", http.StatusBadRequest)
 			return
 		}
 		if err := h.svc.UpdateGauge(name, value); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-	}
-	if mType == models.Counter {
+	case models.Counter:
 		delta, err := strconv.ParseInt(valueStr, 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			http.Error(w, "invalid value", http.StatusBadRequest)
 			return
 		}
 		if err := h.svc.UpdateCounter(name, delta); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
+	default:
+		http.Error(w, "invalid metric type", http.StatusBadRequest)
+		return
 	}
+
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 

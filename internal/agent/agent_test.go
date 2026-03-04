@@ -40,12 +40,6 @@ func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
 	assert.Equal(t, int64(1), counters["PollCount"])
 	assert.Contains(t, gauges, "RandomValue")
 
-	// if got := counters["PollCount"]; got != 1 {
-	// 	t.Fatalf("expected PollCount=1, got %d", got)
-	// }
-	// if _, ok := gauges["RandomValue"]; !ok {
-	// 	t.Fatalf("expected RandomValue to be set")
-	// }
 }
 func TestAgent_Report_SendsSnapshotMetrics(t *testing.T) {
 	st := NewMetricsStorage()
@@ -66,13 +60,4 @@ func TestAgent_Report_SendsSnapshotMetrics(t *testing.T) {
 	require.Contains(t, mock.counters, "PollCount")
 	assert.Equal(t, int64(7), mock.counters["PollCount"])
 
-	// if got, ok := mock.gauges["Alloc"]; !ok || got != 123.45 {
-	// 	t.Fatalf("expected gauge Alloc=123.45, got %v (exists=%v)", got, ok)
-	// }
-	// if got, ok := mock.gauges["RandomValue"]; !ok || got != 0.99 {
-	// 	t.Fatalf("expected gauge RandomValue=0.99, got %v (exists=%v)", got, ok)
-	// }
-	// if got, ok := mock.counters["PollCount"]; !ok || got != 7 {
-	// 	t.Fatalf("expected counter PollCount=7, got %v (exists=%v)", got, ok)
-	// }
 }
