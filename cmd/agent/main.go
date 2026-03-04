@@ -7,19 +7,21 @@ import (
 )
 
 func main() {
+	cfg := parseFlags()
+
 	storage := agent.NewMetricsStorage()
-	sender := agent.NewHTTPSender("http://localhost:8080")
+	sender := agent.NewHTTPSender("http://" + cfg.Addr)
 	a := agent.NewAgent(storage, sender)
 
 	go func() {
 		for {
 			a.Poll()
-			time.Sleep(2 * time.Second)
+			time.Sleep(cfg.PollInterval)
 		}
 	}()
 
 	for {
 		a.Report()
-		time.Sleep(10 * time.Second)
+		time.Sleep(cfg.ReportInterval)
 	}
 }
