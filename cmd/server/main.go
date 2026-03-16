@@ -7,13 +7,19 @@ import (
 	"net/http"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
 	"github.com/go-chi/chi"
+	"go.uber.org/zap"
 )
 
 func main() {
 	cfg := parseFlags()
+	if err := logger.Initialize(cfg.LogLevel); err != nil {
+		log.Fatal(err)
+	}
+	defer logger.Log.Sync()
 
 	storage := repository.NewMemStorage()
 	svc := service.NewMetricsService(storage)
@@ -26,8 +32,8 @@ func main() {
 
 	addr := normalizeAddr(cfg.Addr)
 
-	log.Printf("SERVER STARTED on %s", cfg.Addr)
-	if err := http.ListenAndServe(addr, r); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	logger.Log.Info("Running server", zap.String("address", cfg.Addr))
+	if err := http.ListenAndServe(addr, logger.WithLogging(r)); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 
