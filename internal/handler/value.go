@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 	"github.com/go-chi/chi"
+	"go.uber.org/zap"
 )
 
 func (h *MetricsHandler) Value(w http.ResponseWriter, r *http.Request) {
@@ -43,5 +46,58 @@ func (h *MetricsHandler) Value(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, res)
+
+}
+
+func (h *MetricsHandler) ValueJSON(w http.ResponseWriter, r *http.Request) {
+
+	var req, resp models.Metrics
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if req.MType != models.Counter && req.MType != models.Gauge {
+		logger.Log.Debug("invalid metric type or empty metric type", zap.String("type", req.MType))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	resp.MType = req.MType
+
+	if req.ID == "" {
+		logger.Log.Debug("id cannot be empty")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	resp.ID = req.ID
+	switch req.MType {
+	case models.Gauge:
+		value, err := h.svc.GetGauge(req.ID)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		resp.Value = &value
+
+	case models.Counter:
+		value, err := h.svc.GetCounter(req.ID)
+		if err != nil {
+			logger.Log.Debug("id not found", zap.String("type", req.MType))
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		resp.Delta = &value
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.Log.Debug("error encoding response", zap.Error(err))
+		return
+	}
+	logger.Log.Debug("sending HTTP 200 response")
 
 }
