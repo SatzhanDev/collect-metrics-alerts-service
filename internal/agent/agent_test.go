@@ -28,6 +28,15 @@ func (m *MockSender) SendCounter(name string, value int64) error {
 	m.counters[name] = value
 	return nil
 }
+func (m *MockSender) SendGaugeJSON(name string, value float64) error {
+	m.gauges[name] = value
+	return nil
+}
+
+func (m *MockSender) SendCounterJSON(name string, value int64) error {
+	m.counters[name] = value
+	return nil
+}
 func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
 	st := NewMetricsStorage()
 	mock := NewMockSender()
