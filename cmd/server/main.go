@@ -31,7 +31,10 @@ func main() {
 	r.Post("/update/{type}/{name}/{value}", h.Update)
 
 	r.Post("/update", h.UpdateJSON)
+	r.Post("/update/", h.UpdateJSON)
+
 	r.Post("/value", h.ValueJSON)
+	r.Post("/value/", h.ValueJSON)
 
 	addr := normalizeAddr(cfg.Addr)
 
