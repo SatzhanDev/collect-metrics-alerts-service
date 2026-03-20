@@ -8,6 +8,7 @@ import (
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/middleware"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
 	"github.com/go-chi/chi"
@@ -26,6 +27,9 @@ func main() {
 	h := handler.NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
+	r.Use(middleware.GzipMiddleware)
+	r.Use(logger.WithLogging)
+
 	r.Get("/", h.GetList)
 	r.Get("/value/{type}/{name}", h.Value)
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -39,7 +43,7 @@ func main() {
 	addr := normalizeAddr(cfg.Addr)
 
 	logger.Log.Info("Running server", zap.String("address", cfg.Addr))
-	if err := http.ListenAndServe(addr, logger.WithLogging(r)); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := http.ListenAndServe(addr, r); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 
