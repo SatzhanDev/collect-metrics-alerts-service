@@ -6,19 +6,15 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config"
 )
 
-type Config struct {
-	Addr           string
-	ReportInterval time.Duration
-	PollInterval   time.Duration
-}
-
-func parseFlags() Config {
+func parseFlags() config.ClientConfig {
 	var (
 		reportIntervalSec int
 		pollIntervalSec   int
-		cfg               Config
+		cfg               config.ClientConfig
 	)
 
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "server address")

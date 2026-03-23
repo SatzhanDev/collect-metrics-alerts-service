@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
@@ -23,7 +24,24 @@ func main() {
 	defer logger.Log.Sync()
 
 	storage := repository.NewMemStorage()
-	svc := service.NewMetricsService(storage)
+	svc := service.NewMetricsService(storage, cfg)
+	if cfg.Restore {
+		if err := svc.RestoreFromFile(); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if cfg.StoreInterval > 0 {
+		go func() {
+			ticker := time.NewTicker(cfg.StoreInterval)
+			defer ticker.Stop()
+
+			for range ticker.C {
+				if err := svc.SaveToFile(); err != nil {
+					logger.Log.Error("failed to save metrics to file", zap.Error(err))
+				}
+			}
+		}()
+	}
 	h := handler.NewMetricsHandler(svc)
 
 	r := chi.NewRouter()

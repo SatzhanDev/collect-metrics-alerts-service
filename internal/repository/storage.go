@@ -6,4 +6,6 @@ type Storage interface {
 	GetGauge(name string) (float64, error)
 	GetCounter(name string) (int64, error)
 	GetAll() (gauges map[string]float64, counters map[string]int64)
+	SaveToFile(path string) error
+	RestoreFromFile(path string) error
 }
