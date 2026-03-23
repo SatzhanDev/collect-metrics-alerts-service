@@ -49,10 +49,10 @@ func (m *mockMetricsService) GetAll() (gauges map[string]float64, counters map[s
 	return m.gauges, m.counters
 }
 
-func (s *mockMetricsService) RestoreFromFile() error {
+func (m *mockMetricsService) RestoreFromFile() error {
 	return nil
 }
-func (s *mockMetricsService) SaveToFile() error {
+func (m *mockMetricsService) SaveToFile() error {
 	return nil
 }
 
