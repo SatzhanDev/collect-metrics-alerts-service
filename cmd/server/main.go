@@ -24,7 +24,9 @@ func main() {
 	defer logger.Log.Sync()
 
 	storage := repository.NewMemStorage()
-	svc := service.NewMetricsService(storage, cfg)
+	fileStorage := repository.NewJSONFileStorage()
+
+	svc := service.NewMetricsService(storage, fileStorage, cfg)
 	if cfg.Restore {
 		if err := svc.RestoreFromFile(); err != nil {
 			log.Fatal(err)

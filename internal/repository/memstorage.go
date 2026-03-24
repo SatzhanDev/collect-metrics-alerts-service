@@ -66,3 +66,20 @@ func (s *MemStorage) GetAll() (gauges map[string]float64, counters map[string]in
 	}
 	return g, c
 }
+
+func (s *MemStorage) SetAll(gauges map[string]float64, counters map[string]int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.gauges = make(map[string]float64, len(gauges))
+	for k, v := range gauges {
+		s.gauges[k] = v
+	}
+
+	s.counters = make(map[string]int64, len(counters))
+	for k, v := range counters {
+		s.counters[k] = v
+	}
+
+	return nil
+}

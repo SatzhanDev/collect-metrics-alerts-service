@@ -2,12 +2,14 @@ package service
 
 import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 )
 
 type MetricsService struct {
-	storage repository.Storage
-	cfg     config.ServerConfig
+	storage     repository.Storage
+	filestorage repository.FileStorage
+	cfg         config.ServerConfig
 }
 type Service interface {
 	UpdateGauge(name string, value float64) error
@@ -19,10 +21,11 @@ type Service interface {
 	SaveToFile() error
 }
 
-func NewMetricsService(storage repository.Storage, cfg config.ServerConfig) Service {
+func NewMetricsService(storage repository.Storage, filestorage repository.FileStorage, cfg config.ServerConfig) Service {
 	return &MetricsService{
-		storage: storage,
-		cfg:     cfg,
+		storage:     storage,
+		filestorage: filestorage,
+		cfg:         cfg,
 	}
 }
 
@@ -32,7 +35,7 @@ func (s *MetricsService) UpdateGauge(name string, value float64) error {
 		return err
 	}
 	if s.cfg.StoreInterval == 0 {
-		return s.storage.SaveToFile(s.cfg.FilePath)
+		return s.SaveToFile()
 	}
 	return nil
 }
@@ -42,7 +45,7 @@ func (s *MetricsService) UpdateCounter(name string, delta int64) error {
 		return err
 	}
 	if s.cfg.StoreInterval == 0 {
-		return s.storage.SaveToFile(s.cfg.FilePath)
+		return s.SaveToFile()
 	}
 	return nil
 }
@@ -65,8 +68,51 @@ func (s *MetricsService) GetAll() (gauges map[string]float64, counters map[strin
 	return s.storage.GetAll()
 }
 func (s *MetricsService) RestoreFromFile() error {
-	return s.storage.RestoreFromFile(s.cfg.FilePath)
+	metrics, err := s.filestorage.RestoreFromFile(s.cfg.FilePath)
+	if err != nil {
+		return err
+	}
+
+	gauges := make(map[string]float64)
+	counters := make(map[string]int64)
+
+	for _, metric := range metrics {
+		switch metric.MType {
+		case models.Gauge:
+			if metric.Value != nil {
+				gauges[metric.ID] = *metric.Value
+			}
+		case models.Counter:
+			if metric.Delta != nil {
+				counters[metric.ID] = *metric.Delta
+			}
+		}
+	}
+
+	return s.storage.SetAll(gauges, counters)
 }
 func (s *MetricsService) SaveToFile() error {
-	return s.storage.SaveToFile(s.cfg.FilePath)
+	gauges, counters := s.storage.GetAll()
+
+	var metrics []models.Metrics
+
+	for id, value := range gauges {
+		v := value
+		metrics = append(metrics, models.Metrics{
+			ID:    id,
+			MType: models.Gauge,
+			Value: &v,
+		})
+	}
+
+	for id, delta := range counters {
+		d := delta
+		metrics = append(metrics, models.Metrics{
+			ID:    id,
+			MType: models.Counter,
+			Delta: &d,
+		})
+	}
+
+	return s.filestorage.SaveToFile(s.cfg.FilePath, metrics)
 }
