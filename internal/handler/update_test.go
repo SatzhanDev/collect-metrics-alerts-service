@@ -49,6 +49,13 @@ func (m *mockMetricsService) GetAll() (gauges map[string]float64, counters map[s
 	return m.gauges, m.counters
 }
 
+func (m *mockMetricsService) RestoreFromFile() error {
+	return nil
+}
+func (m *mockMetricsService) SaveToFile() error {
+	return nil
+}
+
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
 	h := NewMetricsHandler(svc)
