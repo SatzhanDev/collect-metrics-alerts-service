@@ -8,6 +8,7 @@ type ServerConfig struct {
 	FilePath      string
 	StoreInterval time.Duration
 	Restore       bool
+	DBDSN         string
 }
 
 type ClientConfig struct {

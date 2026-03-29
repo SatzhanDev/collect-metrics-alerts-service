@@ -21,6 +21,7 @@ func parseFlags() config.ServerConfig {
 	flag.IntVar(&storeIntervalSec, "i", 300, "store interval in seconds")
 	flag.StringVar(&cfg.FilePath, "f", "metricsFile.txt", "file storage path")
 	flag.BoolVar(&cfg.Restore, "r", false, "restore metrics from file")
+	flag.StringVar(&cfg.DBDSN, "d", "", "database dsn")
 
 	flag.Parse()
 	cfg.StoreInterval = time.Duration(storeIntervalSec) * time.Second
@@ -38,8 +39,8 @@ func parseFlags() config.ServerConfig {
 		}
 		cfg.StoreInterval = time.Duration(sec) * time.Second
 	}
-	if envFileath := os.Getenv("FILE_STORAGE_PATH"); envFileath != "" {
-		cfg.FilePath = envFileath
+	if envFilePath := os.Getenv("FILE_STORAGE_PATH"); envFilePath != "" {
+		cfg.FilePath = envFilePath
 	}
 	if envRestoreStr := os.Getenv("RESTORE"); envRestoreStr != "" {
 		envRestore, err := strconv.ParseBool(envRestoreStr)
@@ -47,6 +48,9 @@ func parseFlags() config.ServerConfig {
 			log.Fatal(err)
 		}
 		cfg.Restore = envRestore
+	}
+	if envDBdsn := os.Getenv("DATABASE_DSN"); envDBdsn != "" {
+		cfg.DBDSN = envDBdsn
 	}
 
 	return cfg
