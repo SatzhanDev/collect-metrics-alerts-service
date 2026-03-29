@@ -58,7 +58,7 @@ func (m *mockMetricsService) SaveToFile() error {
 
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	h := NewMetricsHandler(svc, nil)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -74,7 +74,7 @@ func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 
 func TestMetricsHandler_Update_NotFound_WhenMissingParts(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	h := NewMetricsHandler(svc, nil)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -91,7 +91,7 @@ func TestMetricsHandler_Update_NotFound_WhenMissingParts(t *testing.T) {
 
 func TestMetricsHandler_Update_BadRequest_WhenInvalidType(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	h := NewMetricsHandler(svc, nil)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -107,7 +107,7 @@ func TestMetricsHandler_Update_BadRequest_WhenInvalidType(t *testing.T) {
 }
 func TestMetricsHandler_Update_BadRequest_WhenGaugeValueInvalid(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	h := NewMetricsHandler(svc, nil)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -124,7 +124,7 @@ func TestMetricsHandler_Update_BadRequest_WhenGaugeValueInvalid(t *testing.T) {
 
 func TestMetricsHandler_Update_OK_Gauge(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	h := NewMetricsHandler(svc, nil)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -143,7 +143,7 @@ func TestMetricsHandler_Update_OK_Gauge(t *testing.T) {
 
 func TestMetricsHandler_Update_OK_Counter(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	h := NewMetricsHandler(svc, nil)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)

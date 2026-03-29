@@ -1,12 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"log"
 	"net"
 	"net/http"
 	"time"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config/db"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/middleware"
@@ -44,7 +46,24 @@ func main() {
 			}
 		}()
 	}
-	h := handler.NewMetricsHandler(svc)
+	var dbConn *sql.DB
+
+	if cfg.DBDSN != "" {
+		dbCfg := db.Config{
+			DSN:             cfg.DBDSN,
+			MaxOpenConns:    10,
+			MaxIdleConns:    5,
+			ConnMaxLifetime: 5 * time.Minute,
+		}
+
+		var err error
+		dbConn, err = db.NewPostgres(dbCfg)
+		if err != nil {
+			logger.Log.Error("failed to connect to database", zap.Error(err))
+		}
+	}
+
+	h := handler.NewMetricsHandler(svc, dbConn)
 
 	r := chi.NewRouter()
 	r.Use(middleware.GzipMiddleware)
@@ -59,6 +78,8 @@ func main() {
 
 	r.Post("/value", h.ValueJSON)
 	r.Post("/value/", h.ValueJSON)
+
+	r.Get("/ping", h.Ping)
 
 	addr := normalizeAddr(cfg.Addr)
 
