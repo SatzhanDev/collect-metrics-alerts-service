@@ -12,7 +12,7 @@ func (h *MetricsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gauges, counters := h.svc.GetAll()
+	gauges, counters := h.svc.GetAll(r.Context())
 
 	tmpl := `
 	<html>

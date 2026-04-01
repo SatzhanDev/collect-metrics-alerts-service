@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"log"
@@ -13,6 +14,9 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/middleware"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/file"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/mem"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/postgres"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
@@ -25,28 +29,11 @@ func main() {
 	}
 	defer logger.Log.Sync()
 
-	storage := repository.NewMemStorage()
-	fileStorage := repository.NewJSONFileStorage()
-
-	svc := service.NewMetricsService(storage, fileStorage, cfg)
-	if cfg.Restore {
-		if err := svc.RestoreFromFile(); err != nil {
-			log.Fatal(err)
-		}
-	}
-	if cfg.StoreInterval > 0 {
-		go func() {
-			ticker := time.NewTicker(cfg.StoreInterval)
-			defer ticker.Stop()
-
-			for range ticker.C {
-				if err := svc.SaveToFile(); err != nil {
-					logger.Log.Error("failed to save metrics to file", zap.Error(err))
-				}
-			}
-		}()
-	}
-	var dbConn *sql.DB
+	var (
+		storage     repository.Storage
+		fileStorage repository.FileStorage
+		dbConn      *sql.DB
+	)
 
 	if cfg.DBDSN != "" {
 		dbCfg := db.Config{
@@ -60,7 +47,45 @@ func main() {
 		dbConn, err = db.NewPostgres(dbCfg)
 		if err != nil {
 			logger.Log.Error("failed to connect to database", zap.Error(err))
+			log.Fatal(err)
 		}
+
+		if err := db.RunMigrations(dbConn, "./migrations"); err != nil {
+			logger.Log.Error("failed to run migrations", zap.Error(err))
+			log.Fatal(err)
+		}
+
+		storage = postgres.New(dbConn)
+
+	} else if cfg.FileStoragePath != "" {
+
+		memStorage := mem.NewMemStorage()
+		storage = memStorage
+
+		fileStorage = file.NewJSONFileStorage()
+
+	} else {
+		storage = mem.NewMemStorage()
+	}
+
+	svc := service.NewMetricsService(storage, fileStorage, cfg)
+	if cfg.DBDSN == "" && cfg.FileStoragePath != "" && cfg.Restore {
+		if err := svc.RestoreFromFile(context.Background()); err != nil {
+			logger.Log.Error("failed to restore metrics from file", zap.Error(err))
+			log.Fatal(err)
+		}
+	}
+	if cfg.DBDSN == "" && fileStorage != nil && cfg.StoreInterval > 0 {
+		go func() {
+			ticker := time.NewTicker(cfg.StoreInterval)
+			defer ticker.Stop()
+
+			for range ticker.C {
+				if err := svc.SaveToFile(context.Background()); err != nil {
+					logger.Log.Error("failed to save metrics to file", zap.Error(err))
+				}
+			}
+		}()
 	}
 
 	h := handler.NewMetricsHandler(svc, dbConn)

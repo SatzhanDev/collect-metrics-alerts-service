@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -22,37 +23,37 @@ func newMockMetricsService() *mockMetricsService {
 	}
 }
 
-func (m *mockMetricsService) UpdateGauge(name string, v float64) error {
+func (m *mockMetricsService) UpdateGauge(ctx context.Context, name string, v float64) error {
 	m.gauges[name] = v
 	return nil
 }
 
-func (m *mockMetricsService) UpdateCounter(name string, delta int64) error {
+func (m *mockMetricsService) UpdateCounter(ctx context.Context, name string, delta int64) error {
 	m.counters[name] += delta
 	return nil
 }
-func (m *mockMetricsService) GetGauge(name string) (float64, error) {
+func (m *mockMetricsService) GetGauge(ctx context.Context, name string) (float64, error) {
 	v, ok := m.gauges[name]
 	if !ok {
 		return 0, errors.New("metric not found")
 	}
 	return v, nil
 }
-func (m *mockMetricsService) GetCounter(name string) (int64, error) {
+func (m *mockMetricsService) GetCounter(ctx context.Context, name string) (int64, error) {
 	v, ok := m.counters[name]
 	if !ok {
 		return 0, errors.New("metric not found")
 	}
 	return v, nil
 }
-func (m *mockMetricsService) GetAll() (gauges map[string]float64, counters map[string]int64) {
+func (m *mockMetricsService) GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64) {
 	return m.gauges, m.counters
 }
 
-func (m *mockMetricsService) RestoreFromFile() error {
+func (m *mockMetricsService) RestoreFromFile(ctx context.Context) error {
 	return nil
 }
-func (m *mockMetricsService) SaveToFile() error {
+func (m *mockMetricsService) SaveToFile(ctx context.Context) error {
 	return nil
 }
 

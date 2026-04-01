@@ -1,6 +1,7 @@
-package repository
+package mem
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
@@ -18,7 +19,7 @@ func NewMemStorage() *MemStorage {
 	}
 }
 
-func (s *MemStorage) UpdateGauge(name string, value float64) error {
+func (s *MemStorage) UpdateGauge(ctx context.Context, name string, value float64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -26,14 +27,14 @@ func (s *MemStorage) UpdateGauge(name string, value float64) error {
 	return nil
 }
 
-func (s *MemStorage) UpdateCounter(name string, delta int64) error {
+func (s *MemStorage) UpdateCounter(ctx context.Context, name string, delta int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.counters[name] += delta
 	return nil
 }
-func (s *MemStorage) GetGauge(name string) (float64, error) {
+func (s *MemStorage) GetGauge(ctx context.Context, name string) (float64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -42,7 +43,7 @@ func (s *MemStorage) GetGauge(name string) (float64, error) {
 	}
 	return 0, errors.New("metric is not found")
 }
-func (s *MemStorage) GetCounter(name string) (int64, error) {
+func (s *MemStorage) GetCounter(ctx context.Context, name string) (int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -51,7 +52,7 @@ func (s *MemStorage) GetCounter(name string) (int64, error) {
 	}
 	return 0, errors.New("metric is not found")
 }
-func (s *MemStorage) GetAll() (gauges map[string]float64, counters map[string]int64) {
+func (s *MemStorage) GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -67,7 +68,7 @@ func (s *MemStorage) GetAll() (gauges map[string]float64, counters map[string]in
 	return g, c
 }
 
-func (s *MemStorage) SetAll(gauges map[string]float64, counters map[string]int64) error {
+func (s *MemStorage) SetAll(ctx context.Context, gauges map[string]float64, counters map[string]int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

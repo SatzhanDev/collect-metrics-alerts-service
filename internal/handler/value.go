@@ -27,7 +27,7 @@ func (h *MetricsHandler) Value(w http.ResponseWriter, r *http.Request) {
 
 	var res string
 	if mType == models.Gauge {
-		value, err := h.svc.GetGauge(mName)
+		value, err := h.svc.GetGauge(r.Context(), mName)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -36,7 +36,7 @@ func (h *MetricsHandler) Value(w http.ResponseWriter, r *http.Request) {
 
 	}
 	if mType == models.Counter {
-		value, err := h.svc.GetCounter(mName)
+		value, err := h.svc.GetCounter(r.Context(), mName)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -74,7 +74,7 @@ func (h *MetricsHandler) ValueJSON(w http.ResponseWriter, r *http.Request) {
 	resp.ID = req.ID
 	switch req.MType {
 	case models.Gauge:
-		value, err := h.svc.GetGauge(req.ID)
+		value, err := h.svc.GetGauge(r.Context(), req.ID)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -82,7 +82,7 @@ func (h *MetricsHandler) ValueJSON(w http.ResponseWriter, r *http.Request) {
 		resp.Value = &value
 
 	case models.Counter:
-		value, err := h.svc.GetCounter(req.ID)
+		value, err := h.svc.GetCounter(r.Context(), req.ID)
 		if err != nil {
 			logger.Log.Debug("id not found", zap.String("type", req.MType))
 			w.WriteHeader(http.StatusNotFound)

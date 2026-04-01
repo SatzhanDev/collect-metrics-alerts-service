@@ -1,6 +1,7 @@
-package repository
+package file
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 
@@ -13,7 +14,7 @@ func NewJSONFileStorage() *JSONFileStorage {
 	return &JSONFileStorage{}
 }
 
-func (s *JSONFileStorage) RestoreFromFile(path string) ([]models.Metrics, error) {
+func (s *JSONFileStorage) RestoreFromFile(ctx context.Context, path string) ([]models.Metrics, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -31,7 +32,7 @@ func (s *JSONFileStorage) RestoreFromFile(path string) ([]models.Metrics, error)
 
 }
 
-func (s *JSONFileStorage) SaveToFile(path string, metrics []models.Metrics) error {
+func (s *JSONFileStorage) SaveToFile(ctx context.Context, path string, metrics []models.Metrics) error {
 
 	data, err := json.Marshal(metrics)
 	if err != nil {
