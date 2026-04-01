@@ -52,7 +52,7 @@ func (s *MemStorage) GetCounter(ctx context.Context, name string) (int64, error)
 	}
 	return 0, errors.New("metric is not found")
 }
-func (s *MemStorage) GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64) {
+func (s *MemStorage) GetAll(ctx context.Context) (map[string]float64, map[string]int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -65,7 +65,7 @@ func (s *MemStorage) GetAll(ctx context.Context) (gauges map[string]float64, cou
 	for k, v := range s.counters {
 		c[k] = v
 	}
-	return g, c
+	return g, c, nil
 }
 
 func (s *MemStorage) SetAll(ctx context.Context, gauges map[string]float64, counters map[string]int64) error {

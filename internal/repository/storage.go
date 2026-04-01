@@ -11,7 +11,7 @@ type Storage interface {
 	UpdateCounter(ctx context.Context, name string, delta int64) error
 	GetGauge(ctx context.Context, name string) (float64, error)
 	GetCounter(ctx context.Context, name string) (int64, error)
-	GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64)
+	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
 	SetAll(ctx context.Context, gauges map[string]float64, counters map[string]int64) error
 }
 

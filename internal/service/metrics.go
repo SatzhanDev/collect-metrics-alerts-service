@@ -18,7 +18,7 @@ type Service interface {
 	UpdateCounter(ctx context.Context, name string, delta int64) error
 	GetGauge(ctx context.Context, name string) (float64, error)
 	GetCounter(ctx context.Context, name string) (int64, error)
-	GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64)
+	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
 	RestoreFromFile(ctx context.Context) error
 	SaveToFile(ctx context.Context) error
 }
@@ -66,8 +66,12 @@ func (s *MetricsService) GetCounter(ctx context.Context, name string) (int64, er
 	return res, nil
 }
 
-func (s *MetricsService) GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64) {
-	return s.storage.GetAll(ctx)
+func (s *MetricsService) GetAll(ctx context.Context) (map[string]float64, map[string]int64, error) {
+	gauges, counters, err := s.storage.GetAll(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return gauges, counters, nil
 }
 func (s *MetricsService) RestoreFromFile(ctx context.Context) error {
 	metrics, err := s.filestorage.RestoreFromFile(ctx, s.cfg.FileStoragePath)
@@ -94,7 +98,13 @@ func (s *MetricsService) RestoreFromFile(ctx context.Context) error {
 	return s.storage.SetAll(ctx, gauges, counters)
 }
 func (s *MetricsService) SaveToFile(ctx context.Context) error {
-	gauges, counters := s.storage.GetAll(ctx)
+	if s.filestorage == nil {
+		return nil
+	}
+	gauges, counters, err := s.storage.GetAll(ctx)
+	if err != nil {
+		return err
+	}
 
 	var metrics []models.Metrics
 

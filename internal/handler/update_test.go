@@ -14,6 +14,7 @@ import (
 type mockMetricsService struct {
 	gauges   map[string]float64
 	counters map[string]int64
+	err      error
 }
 
 func newMockMetricsService() *mockMetricsService {
@@ -46,8 +47,11 @@ func (m *mockMetricsService) GetCounter(ctx context.Context, name string) (int64
 	}
 	return v, nil
 }
-func (m *mockMetricsService) GetAll(ctx context.Context) (gauges map[string]float64, counters map[string]int64) {
-	return m.gauges, m.counters
+func (m *mockMetricsService) GetAll(ctx context.Context) (map[string]float64, map[string]int64, error) {
+	if m.err != nil {
+		return nil, nil, m.err
+	}
+	return m.gauges, m.counters, nil
 }
 
 func (m *mockMetricsService) RestoreFromFile(ctx context.Context) error {
