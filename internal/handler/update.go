@@ -24,7 +24,7 @@ func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid value", http.StatusBadRequest)
 			return
 		}
-		if err := h.svc.UpdateGauge(name, value); err != nil {
+		if err := h.svc.UpdateGauge(r.Context(), name, value); err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -34,7 +34,7 @@ func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid value", http.StatusBadRequest)
 			return
 		}
-		if err := h.svc.UpdateCounter(name, delta); err != nil {
+		if err := h.svc.UpdateCounter(r.Context(), name, delta); err != nil {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -72,7 +72,7 @@ func (h *MetricsHandler) UpdateJSON(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if err := h.svc.UpdateGauge(req.ID, *req.Value); err != nil {
+		if err := h.svc.UpdateGauge(r.Context(), req.ID, *req.Value); err != nil {
 			logger.Log.Debug("cannot update gauge", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -86,7 +86,7 @@ func (h *MetricsHandler) UpdateJSON(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if err := h.svc.UpdateCounter(req.ID, *req.Delta); err != nil {
+		if err := h.svc.UpdateCounter(r.Context(), req.ID, *req.Delta); err != nil {
 			logger.Log.Debug("cannot update counter", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return

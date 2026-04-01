@@ -19,7 +19,7 @@ func parseFlags() config.ServerConfig {
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "HTTP server address")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level")
 	flag.IntVar(&storeIntervalSec, "i", 300, "store interval in seconds")
-	flag.StringVar(&cfg.FilePath, "f", "metricsFile.txt", "file storage path")
+	flag.StringVar(&cfg.FileStoragePath, "f", "", "file storage path")
 	flag.BoolVar(&cfg.Restore, "r", false, "restore metrics from file")
 	flag.StringVar(&cfg.DBDSN, "d", "", "database dsn")
 
@@ -40,7 +40,7 @@ func parseFlags() config.ServerConfig {
 		cfg.StoreInterval = time.Duration(sec) * time.Second
 	}
 	if envFilePath := os.Getenv("FILE_STORAGE_PATH"); envFilePath != "" {
-		cfg.FilePath = envFilePath
+		cfg.FileStoragePath = envFilePath
 	}
 	if envRestoreStr := os.Getenv("RESTORE"); envRestoreStr != "" {
 		envRestore, err := strconv.ParseBool(envRestoreStr)

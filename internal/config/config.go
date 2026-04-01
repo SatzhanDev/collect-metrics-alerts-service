@@ -3,12 +3,12 @@ package config
 import "time"
 
 type ServerConfig struct {
-	Addr          string
-	LogLevel      string
-	FilePath      string
-	StoreInterval time.Duration
-	Restore       bool
-	DBDSN         string
+	Addr            string
+	LogLevel        string
+	FileStoragePath string
+	StoreInterval   time.Duration
+	Restore         bool
+	DBDSN           string
 }
 
 type ClientConfig struct {

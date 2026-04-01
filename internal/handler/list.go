@@ -12,7 +12,11 @@ func (h *MetricsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gauges, counters := h.svc.GetAll()
+	gauges, counters, err := h.svc.GetAll(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	tmpl := `
 	<html>
@@ -49,7 +53,7 @@ func (h *MetricsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	err := t.Execute(w, data)
+	err = t.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
