@@ -1,6 +1,11 @@
 package agent
 
-import "math/rand"
+import (
+	"context"
+	"math/rand"
+
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+)
 
 type Agent struct {
 	storage Storage
@@ -28,14 +33,38 @@ func (a *Agent) Poll() {
 
 }
 
-func (a *Agent) Report() {
+func (a *Agent) Report(ctx context.Context) error {
 	gauges, counters := a.storage.Snapshot()
 
+	metrics := make([]models.Metrics, 0, len(gauges)+len(counters))
 	for name, value := range gauges {
-		_ = a.sender.SendGaugeJSON(name, value)
+		v := value
+		metrics = append(metrics, models.Metrics{
+			ID:    name,
+			MType: models.Gauge,
+			Value: &v,
+		})
+	}
+	for name, delta := range counters {
+		d := delta
+		metrics = append(metrics, models.Metrics{
+			ID:    name,
+			MType: models.Counter,
+			Delta: &d,
+		})
 	}
 
-	for name, value := range counters {
-		_ = a.sender.SendCounterJSON(name, value)
-	}
+	return a.sender.SendBatch(ctx, metrics)
 }
+
+// func (a *Agent) Report() {
+// 	gauges, counters := a.storage.Snapshot()
+
+// 	for name, value := range gauges {
+// 		_ = a.sender.SendGaugeJSON(name, value)
+// 	}
+
+// 	for name, value := range counters {
+// 		_ = a.sender.SendCounterJSON(name, value)
+// 	}
+// }

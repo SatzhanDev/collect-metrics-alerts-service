@@ -21,6 +21,7 @@ type Service interface {
 	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
 	RestoreFromFile(ctx context.Context) error
 	SaveToFile(ctx context.Context) error
+	UpdateBatch(ctx context.Context, metrics []models.Metrics) error
 }
 
 func NewMetricsService(storage repository.Storage, filestorage repository.FileStorage, cfg config.ServerConfig) Service {
@@ -94,7 +95,6 @@ func (s *MetricsService) RestoreFromFile(ctx context.Context) error {
 			}
 		}
 	}
-
 	return s.storage.SetAll(ctx, gauges, counters)
 }
 func (s *MetricsService) SaveToFile(ctx context.Context) error {
@@ -127,4 +127,8 @@ func (s *MetricsService) SaveToFile(ctx context.Context) error {
 	}
 
 	return s.filestorage.SaveToFile(ctx, s.cfg.FileStoragePath, metrics)
+}
+
+func (s *MetricsService) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
+	return s.storage.UpdateBatch(ctx, metrics)
 }
