@@ -40,6 +40,18 @@ func (m *MockSender) SendCounterJSON(name string, value int64) error {
 	return nil
 }
 func (m *MockSender) SendBatch(ctx context.Context, metrics []models.Metrics) error {
+	for _, metric := range metrics {
+		switch metric.MType {
+		case models.Gauge:
+			if metric.Value != nil {
+				m.gauges[metric.ID] = *metric.Value
+			}
+		case models.Counter:
+			if metric.Delta != nil {
+				m.counters[metric.ID] = *metric.Delta
+			}
+		}
+	}
 	return nil
 }
 func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {

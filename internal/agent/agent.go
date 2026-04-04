@@ -54,19 +54,6 @@ func (a *Agent) Report(ctx context.Context) error {
 		})
 	}
 
-	err := a.sender.SendBatch(ctx, metrics)
-	if err == nil {
-		return nil
-	}
+	return a.sender.SendBatch(ctx, metrics)
 
-	// fallback
-	for name, value := range gauges {
-		_ = a.sender.SendGaugeJSON(name, value)
-	}
-
-	for name, value := range counters {
-		_ = a.sender.SendCounterJSON(name, value)
-	}
-
-	return nil
 }
