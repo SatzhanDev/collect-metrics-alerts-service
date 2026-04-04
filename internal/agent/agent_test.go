@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"context"
 	"testing"
 
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +39,21 @@ func (m *MockSender) SendCounterJSON(name string, value int64) error {
 	m.counters[name] = value
 	return nil
 }
+func (m *MockSender) SendBatch(ctx context.Context, metrics []models.Metrics) error {
+	for _, metric := range metrics {
+		switch metric.MType {
+		case models.Gauge:
+			if metric.Value != nil {
+				m.gauges[metric.ID] = *metric.Value
+			}
+		case models.Counter:
+			if metric.Delta != nil {
+				m.counters[metric.ID] = *metric.Delta
+			}
+		}
+	}
+	return nil
+}
 func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
 	st := NewMetricsStorage()
 	mock := NewMockSender()
@@ -59,7 +76,7 @@ func TestAgent_Report_SendsSnapshotMetrics(t *testing.T) {
 	_ = st.SetGauge("RandomValue", 0.99)
 	_ = st.AddCounter("PollCount", 7)
 
-	a.Report()
+	a.Report(t.Context())
 	require.Contains(t, mock.gauges, "Alloc")
 	assert.Equal(t, 123.45, mock.gauges["Alloc"])
 

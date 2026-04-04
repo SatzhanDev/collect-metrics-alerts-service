@@ -110,3 +110,52 @@ func (h *MetricsHandler) UpdateJSON(w http.ResponseWriter, r *http.Request) {
 	logger.Log.Debug("sending HTTP 200 response")
 
 }
+
+func (h *MetricsHandler) UpdateBatch(w http.ResponseWriter, r *http.Request) {
+	var req []models.Metrics
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&req); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if len(req) == 0 {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	for _, m := range req {
+		if m.ID == "" {
+			http.Error(w, "id is empty", http.StatusBadRequest)
+			return
+		}
+
+		switch m.MType {
+		case models.Gauge:
+			if m.Value == nil {
+				http.Error(w, "value is nil", http.StatusBadRequest)
+				return
+			}
+		case models.Counter:
+			if m.Delta == nil {
+				http.Error(w, "delta is nil", http.StatusBadRequest)
+				return
+			}
+		default:
+			http.Error(w, "invalid metric type", http.StatusBadRequest)
+			return
+		}
+	}
+	if err := h.svc.UpdateBatch(r.Context(), req); err != nil {
+		logger.Log.Debug("cannot batch metrics", zap.Error(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	logger.Log.Debug("sending HTTP 200 response")
+}

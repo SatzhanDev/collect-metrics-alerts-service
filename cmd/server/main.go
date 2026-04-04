@@ -104,6 +104,9 @@ func main() {
 	r.Post("/value", h.ValueJSON)
 	r.Post("/value/", h.ValueJSON)
 
+	r.Post("/updates", h.UpdateBatch)
+	r.Post("/updates/", h.UpdateBatch)
+
 	r.Get("/ping", h.Ping)
 
 	addr := normalizeAddr(cfg.Addr)

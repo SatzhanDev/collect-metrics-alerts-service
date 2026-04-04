@@ -2,6 +2,8 @@ package agent
 
 import (
 	"bytes"
+	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +17,7 @@ type Sender interface {
 	SendCounter(name string, value int64) error
 	SendGaugeJSON(name string, value float64) error
 	SendCounterJSON(name string, value int64) error
+	SendBatch(ctx context.Context, metrics []models.Metrics) error
 }
 
 type HTTPSender struct {
@@ -117,6 +120,49 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (s *HTTPSender) SendBatch(ctx context.Context, metrics []models.Metrics) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+	body, err := json.Marshal(metrics)
+	if err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(body); err != nil {
+		return err
+	}
+	if err := gz.Close(); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		s.serverAddr+"/updates/",
+		&buf,
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %d", resp.StatusCode)
 	}
 
 	return nil

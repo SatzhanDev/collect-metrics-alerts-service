@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +61,9 @@ func (m *mockMetricsService) RestoreFromFile(ctx context.Context) error {
 func (m *mockMetricsService) SaveToFile(ctx context.Context) error {
 	return nil
 }
-
+func (m *mockMetricsService) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
+	return nil
+}
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
 	h := NewMetricsHandler(svc, nil)

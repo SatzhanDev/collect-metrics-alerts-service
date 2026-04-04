@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"sync"
+
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 )
 
 type MemStorage struct {
@@ -80,6 +82,40 @@ func (s *MemStorage) SetAll(ctx context.Context, gauges map[string]float64, coun
 	s.counters = make(map[string]int64, len(counters))
 	for k, v := range counters {
 		s.counters[k] = v
+	}
+
+	return nil
+}
+func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
+
+	for _, v := range metrics {
+		if v.ID == "" {
+			return errors.New("id is empty")
+		}
+		switch v.MType {
+		case models.Gauge:
+			if v.Value == nil {
+				return errors.New("value is nil")
+			}
+		case models.Counter:
+			if v.Delta == nil {
+				return errors.New("delta is nil")
+			}
+		default:
+			return errors.New("invalid metric type")
+		}
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, v := range metrics {
+		switch v.MType {
+		case models.Gauge:
+			s.gauges[v.ID] = *v.Value
+		case models.Counter:
+			s.counters[v.ID] += *v.Delta
+		}
 	}
 
 	return nil
