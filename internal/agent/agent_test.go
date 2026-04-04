@@ -39,7 +39,7 @@ func (m *MockSender) SendCounterJSON(name string, value int64) error {
 	m.counters[name] = value
 	return nil
 }
-func (s *MockSender) SendBatch(ctx context.Context, metrics []models.Metrics) error {
+func (m *MockSender) SendBatch(ctx context.Context, metrics []models.Metrics) error {
 	return nil
 }
 func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
