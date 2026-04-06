@@ -120,3 +120,6 @@ func (s *MemStorage) UpdateBatch(ctx context.Context, metrics []models.Metrics) 
 
 	return nil
 }
+func (s *MemStorage) Ping(ctx context.Context) error {
+	return nil
+}

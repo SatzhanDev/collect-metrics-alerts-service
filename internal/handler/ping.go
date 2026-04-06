@@ -1,18 +1,17 @@
 package handler
 
 import (
+	"context"
 	"net/http"
+	"time"
 )
 
 func (h *MetricsHandler) Ping(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+	defer cancel()
 
-	if h.db == nil {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if err := h.db.PingContext(r.Context()); err != nil {
-		http.Error(w, "database is unavailable", http.StatusInternalServerError)
+	if err := h.svc.Ping(ctx); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

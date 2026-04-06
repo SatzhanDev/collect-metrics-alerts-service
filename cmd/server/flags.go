@@ -10,6 +10,12 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config"
 )
 
+const (
+	defaultMaxOpenConns    = 10
+	defaultMaxIdleConns    = 5
+	defaultConnMaxLifetime = 5 * time.Minute
+)
+
 func parseFlags() config.ServerConfig {
 	var (
 		cfg              config.ServerConfig

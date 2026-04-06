@@ -14,6 +14,7 @@ type Storage interface {
 	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
 	SetAll(ctx context.Context, gauges map[string]float64, counters map[string]int64) error
 	UpdateBatch(ctx context.Context, metrics []models.Metrics) error
+	Ping(ctx context.Context) error
 }
 
 type FileStorage interface {

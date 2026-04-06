@@ -217,3 +217,7 @@ func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) err
 		return tx.Commit()
 	})
 }
+
+func (s *Storage) Ping(ctx context.Context) error {
+	return s.db.PingContext(ctx)
+}
