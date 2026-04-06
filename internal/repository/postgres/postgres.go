@@ -169,7 +169,13 @@ func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) err
 			return err
 		}
 
-		defer tx.Rollback()
+		defer func() {
+			if err != nil {
+				if rbErr := tx.Rollback(); rbErr != nil {
+					err = errors.Join(err, rbErr)
+				}
+			}
+		}()
 
 		for _, m := range metrics {
 			switch m.MType {
@@ -214,7 +220,15 @@ func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) err
 				return errors.New("invalid metric type")
 			}
 		}
-		return tx.Commit()
+		if err = tx.Commit(); err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				return errors.Join(err, rbErr)
+			}
+			return err
+		}
+
+		return nil
+
 	})
 }
 
