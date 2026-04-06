@@ -65,7 +65,7 @@ func (m *mockMetricsService) UpdateBatch(ctx context.Context, metrics []models.M
 	return nil
 }
 func (m *mockMetricsService) Ping(ctx context.Context) error {
-	return m.Ping(ctx)
+	return nil
 }
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
