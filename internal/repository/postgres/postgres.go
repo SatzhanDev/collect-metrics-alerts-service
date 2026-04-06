@@ -163,55 +163,75 @@ func (s *Storage) SetAll(ctx context.Context, gauges map[string]float64, counter
 }
 
 func (s *Storage) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
+	return withRetry(ctx, func() error {
+		tx, err := s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return err
+		}
 
-	defer tx.Rollback()
-
-	for _, m := range metrics {
-		switch m.MType {
-		case models.Gauge:
-			if m.Value == nil {
-				return errors.New("value is nil")
+		defer func() {
+			if err != nil {
+				if rbErr := tx.Rollback(); rbErr != nil {
+					err = errors.Join(err, rbErr)
+				}
 			}
+		}()
 
-			_, err = tx.ExecContext(ctx,
-				`INSERT INTO metrics (id, mtype, value)
+		for _, m := range metrics {
+			switch m.MType {
+			case models.Gauge:
+				if m.Value == nil {
+					return errors.New("value is nil")
+				}
+
+				_, err = tx.ExecContext(ctx,
+					`INSERT INTO metrics (id, mtype, value)
 				VALUES ($1, 'gauge', $2)
 				ON CONFLICT (id)
 				DO UPDATE SET
 					mtype = 'gauge',
 					value = EXCLUDED.value,
 					delta = NULL`,
-				m.ID, *m.Value,
-			)
-			if err != nil {
-				return err
-			}
-		case models.Counter:
-			if m.Delta == nil {
-				return errors.New("delta is nil")
-			}
+					m.ID, *m.Value,
+				)
+				if err != nil {
+					return err
+				}
+			case models.Counter:
+				if m.Delta == nil {
+					return errors.New("delta is nil")
+				}
 
-			_, err = tx.ExecContext(ctx,
-				`INSERT INTO metrics (id, mtype, delta)
+				_, err = tx.ExecContext(ctx,
+					`INSERT INTO metrics (id, mtype, delta)
 				 VALUES ($1, 'counter', $2)
 				 ON CONFLICT (id)
 				 DO UPDATE SET
 				     mtype = 'counter',
 				     delta = metrics.delta + EXCLUDED.delta,
 				     value = NULL`,
-				m.ID, *m.Delta,
-			)
-			if err != nil {
-				return err
-			}
+					m.ID, *m.Delta,
+				)
+				if err != nil {
+					return err
+				}
 
-		default:
-			return errors.New("invalid metric type")
+			default:
+				return errors.New("invalid metric type")
+			}
 		}
-	}
-	return tx.Commit()
+		if err = tx.Commit(); err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				return errors.Join(err, rbErr)
+			}
+			return err
+		}
+
+		return nil
+
+	})
+}
+
+func (s *Storage) Ping(ctx context.Context) error {
+	return s.db.PingContext(ctx)
 }

@@ -64,9 +64,12 @@ func (m *mockMetricsService) SaveToFile(ctx context.Context) error {
 func (m *mockMetricsService) UpdateBatch(ctx context.Context, metrics []models.Metrics) error {
 	return nil
 }
+func (m *mockMetricsService) Ping(ctx context.Context) error {
+	return nil
+}
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc, nil)
+	h := NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -82,7 +85,7 @@ func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 
 func TestMetricsHandler_Update_NotFound_WhenMissingParts(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc, nil)
+	h := NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -99,7 +102,7 @@ func TestMetricsHandler_Update_NotFound_WhenMissingParts(t *testing.T) {
 
 func TestMetricsHandler_Update_BadRequest_WhenInvalidType(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc, nil)
+	h := NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -115,7 +118,7 @@ func TestMetricsHandler_Update_BadRequest_WhenInvalidType(t *testing.T) {
 }
 func TestMetricsHandler_Update_BadRequest_WhenGaugeValueInvalid(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc, nil)
+	h := NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -132,7 +135,7 @@ func TestMetricsHandler_Update_BadRequest_WhenGaugeValueInvalid(t *testing.T) {
 
 func TestMetricsHandler_Update_OK_Gauge(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc, nil)
+	h := NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -151,7 +154,7 @@ func TestMetricsHandler_Update_OK_Gauge(t *testing.T) {
 
 func TestMetricsHandler_Update_OK_Counter(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc, nil)
+	h := NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)

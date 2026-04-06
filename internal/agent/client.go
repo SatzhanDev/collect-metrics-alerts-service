@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 )
@@ -126,6 +127,30 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 }
 
 func (s *HTTPSender) SendBatch(ctx context.Context, metrics []models.Metrics) error {
+	delays := []time.Duration{
+		1 * time.Second,
+		3 * time.Second,
+		5 * time.Second,
+	}
+
+	var err error
+
+	for i := 0; i <= len(delays); i++ {
+		err = s.sendOnce(ctx, metrics)
+		if err == nil {
+			return nil
+		}
+
+		if i == len(delays) {
+			break
+		}
+
+		time.Sleep(delays[i])
+	}
+
+	return err
+}
+func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) error {
 	if len(metrics) == 0 {
 		return nil
 	}

@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 func NewPostgres(cfg Config) (*sql.DB, error) {
@@ -28,7 +30,9 @@ func NewPostgres(cfg Config) (*sql.DB, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		_ = db.Close()
+		if err := db.Close(); err != nil {
+			logger.Log.Error("failed to close database connection", zap.Error(err))
+		}
 		return nil, err
 	}
 

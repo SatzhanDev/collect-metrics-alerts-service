@@ -38,9 +38,9 @@ func main() {
 	if cfg.DBDSN != "" {
 		dbCfg := db.Config{
 			DSN:             cfg.DBDSN,
-			MaxOpenConns:    10,
-			MaxIdleConns:    5,
-			ConnMaxLifetime: 5 * time.Minute,
+			MaxOpenConns:    defaultMaxOpenConns,
+			MaxIdleConns:    defaultMaxIdleConns,
+			ConnMaxLifetime: defaultConnMaxLifetime,
 		}
 
 		var err error
@@ -88,7 +88,7 @@ func main() {
 		}()
 	}
 
-	h := handler.NewMetricsHandler(svc, dbConn)
+	h := handler.NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
 	r.Use(middleware.GzipMiddleware)
