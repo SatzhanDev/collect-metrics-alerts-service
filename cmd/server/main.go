@@ -91,8 +91,10 @@ func main() {
 	h := handler.NewMetricsHandler(svc)
 
 	r := chi.NewRouter()
+	r.Use(middleware.HashValidationMiddleware(cfg.Key))
 	r.Use(middleware.GzipMiddleware)
 	r.Use(logger.WithLogging)
+	r.Use(middleware.HashResponseMiddleware(cfg.Key))
 
 	r.Get("/", h.GetList)
 	r.Get("/value/{type}/{name}", h.Value)

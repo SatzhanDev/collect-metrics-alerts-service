@@ -20,6 +20,7 @@ func parseFlags() config.ClientConfig {
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "server address")
 	flag.IntVar(&reportIntervalSec, "r", 10, "report interval in seconds")
 	flag.IntVar(&pollIntervalSec, "p", 2, "poll interval in seconds")
+	flag.StringVar(&cfg.Key, "k", "", "hash key")
 	flag.Parse()
 
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
@@ -40,6 +41,9 @@ func parseFlags() config.ClientConfig {
 			log.Fatal(err)
 		}
 		pollIntervalSec = sec
+	}
+	if envKey := os.Getenv("KEY"); envKey != "" {
+		cfg.Key = envKey
 	}
 
 	cfg.ReportInterval = time.Duration(reportIntervalSec) * time.Second

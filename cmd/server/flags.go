@@ -28,6 +28,7 @@ func parseFlags() config.ServerConfig {
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file storage path")
 	flag.BoolVar(&cfg.Restore, "r", false, "restore metrics from file")
 	flag.StringVar(&cfg.DBDSN, "d", "", "database dsn")
+	flag.StringVar(&cfg.Key, "k", "", "hash key")
 
 	flag.Parse()
 	cfg.StoreInterval = time.Duration(storeIntervalSec) * time.Second
@@ -57,6 +58,9 @@ func parseFlags() config.ServerConfig {
 	}
 	if envDBdsn := os.Getenv("DATABASE_DSN"); envDBdsn != "" {
 		cfg.DBDSN = envDBdsn
+	}
+	if envKey := os.Getenv("KEY"); envKey != "" {
+		cfg.Key = envKey
 	}
 
 	return cfg

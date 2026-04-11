@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/hashutil"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 )
 
@@ -23,11 +24,13 @@ type Sender interface {
 
 type HTTPSender struct {
 	serverAddr string
+	key        string
 }
 
-func NewHTTPSender(serverAddr string) *HTTPSender {
+func NewHTTPSender(serverAddr string, key string) *HTTPSender {
 	return &HTTPSender{
 		serverAddr: serverAddr,
+		key:        key,
 	}
 }
 
@@ -179,6 +182,11 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+
+	if s.key != "" {
+		hash := hashutil.ComputeHash(buf.Bytes(), s.key)
+		req.Header.Set("HashSHA256", hash)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

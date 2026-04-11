@@ -13,7 +13,7 @@ func main() {
 	cfg := parseFlags()
 
 	storage := agent.NewMetricsStorage()
-	sender := agent.NewHTTPSender("http://" + cfg.Addr)
+	sender := agent.NewHTTPSender("http://"+cfg.Addr, cfg.Key)
 	a := agent.NewAgent(storage, sender)
 
 	go func() {

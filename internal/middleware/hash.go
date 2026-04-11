@@ -1,0 +1,78 @@
+package middleware
+
+import (
+	"bytes"
+	"io"
+	"net/http"
+
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/hashutil"
+)
+
+type hashResponseWriter struct {
+	http.ResponseWriter
+	body   bytes.Buffer
+	status int
+}
+
+func (w *hashResponseWriter) WriteHeader(statusCode int) {
+	w.status = statusCode
+}
+
+func (w *hashResponseWriter) Write(b []byte) (int, error) {
+	return w.body.Write(b)
+}
+
+func HashResponseMiddleware(key string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			if key != "" {
+				next.ServeHTTP(w, r)
+			}
+			rw := &hashResponseWriter{
+				ResponseWriter: w,
+				status:         http.StatusOK,
+			}
+			next.ServeHTTP(rw, r)
+
+			bodyBytes := rw.body.Bytes()
+			hash := hashutil.ComputeHash(bodyBytes, key)
+
+			if hash != "" {
+				w.Header().Set("HashSHA256", hash)
+			}
+
+			w.WriteHeader(rw.status)
+			_, _ = w.Write(bodyBytes)
+		})
+	}
+}
+
+func HashValidationMiddleware(key string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if key == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "cannot read request body", http.StatusBadRequest)
+				return
+			}
+
+			r.Body.Close()
+
+			expectedHash := hashutil.ComputeHash(body, key)
+			receivedHash := r.Header.Get("HashSHA256")
+
+			if receivedHash != expectedHash {
+				http.Error(w, "invalid hash", http.StatusBadRequest)
+				return
+			}
+
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
+			next.ServeHTTP(w, r)
+		})
+	}
+}
