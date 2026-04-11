@@ -26,8 +26,9 @@ func HashResponseMiddleware(key string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			if key != "" {
+			if key == "" {
 				next.ServeHTTP(w, r)
+				return
 			}
 			rw := &hashResponseWriter{
 				ResponseWriter: w,
@@ -66,6 +67,11 @@ func HashValidationMiddleware(key string) func(http.Handler) http.Handler {
 			expectedHash := hashutil.ComputeHash(body, key)
 			receivedHash := r.Header.Get("HashSHA256")
 
+			if receivedHash == "" {
+				r.Body = io.NopCloser(bytes.NewBuffer(body))
+				next.ServeHTTP(w, r)
+				return
+			}
 			if receivedHash != expectedHash {
 				http.Error(w, "invalid hash", http.StatusBadRequest)
 				return
