@@ -16,5 +16,6 @@ type ClientConfig struct {
 	Addr           string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
+	RateLimit      int
 	Key            string
 }

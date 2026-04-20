@@ -21,6 +21,7 @@ func parseFlags() config.ClientConfig {
 	flag.IntVar(&reportIntervalSec, "r", 10, "report interval in seconds")
 	flag.IntVar(&pollIntervalSec, "p", 2, "poll interval in seconds")
 	flag.StringVar(&cfg.Key, "k", "", "hash key")
+	flag.IntVar(&cfg.RateLimit, "l", 1, "rate limit")
 	flag.Parse()
 
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
@@ -44,6 +45,10 @@ func parseFlags() config.ClientConfig {
 	}
 	if envKey := os.Getenv("KEY"); envKey != "" {
 		cfg.Key = envKey
+	}
+	if v := os.Getenv("RATE_LIMIT"); v != "" {
+		val, _ := strconv.Atoi(v)
+		cfg.RateLimit = val
 	}
 
 	cfg.ReportInterval = time.Duration(reportIntervalSec) * time.Second
