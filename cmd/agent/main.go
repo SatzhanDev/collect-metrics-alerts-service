@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/agent"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 )
 
 func main() {
@@ -24,17 +24,15 @@ func main() {
 	a := agent.NewAgent(storage, sender, cfg.RateLimit)
 
 	a.StartWorkers(ctx, cfg.RateLimit)
-
 	a.StartRuntimeCollector(ctx, cfg.PollInterval)
 	a.StartSystemCollector(ctx, cfg.PollInterval)
 
 	<-sigCh
-	fmt.Println("shutting down...")
+	logger.Log.Info("shutting down agent")
 
 	cancel()
+	a.Stop()
 
-	a.Wait()
-
-	fmt.Println("graceful shutdown complete")
+	logger.Log.Info("graceful shutdown complete")
 
 }

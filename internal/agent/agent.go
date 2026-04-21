@@ -12,10 +12,11 @@ import (
 )
 
 type Agent struct {
-	storage Storage
-	sender  Sender
-	jobs    chan []models.Metrics
-	wg      sync.WaitGroup
+	storage     Storage
+	sender      Sender
+	jobs        chan []models.Metrics
+	producersWG sync.WaitGroup
+	workersWG   sync.WaitGroup
 }
 
 func NewAgent(storage Storage, sender Sender, rateLimit int) *Agent {
@@ -27,6 +28,24 @@ func NewAgent(storage Storage, sender Sender, rateLimit int) *Agent {
 		sender:  sender,
 		jobs:    make(chan []models.Metrics, rateLimit*2),
 	}
+}
+
+func (a *Agent) runProducer(fn func()) {
+	a.producersWG.Add(1)
+
+	go func() {
+		defer a.producersWG.Done()
+		fn()
+	}()
+}
+
+func (a *Agent) runWorker(fn func()) {
+	a.workersWG.Add(1)
+
+	go func() {
+		defer a.workersWG.Done()
+		fn()
+	}()
 }
 
 func (a *Agent) Poll() {
@@ -95,37 +114,29 @@ func (a *Agent) CollectRuntimeBatch() []models.Metrics {
 
 func (a *Agent) StartWorkers(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
-		a.wg.Add(1)
+		workerID := i
 
-		go func(workerID int) {
-			defer a.wg.Done()
+		a.runWorker(func() {
+			for batch := range a.jobs {
+				if len(batch) == 0 {
+					continue
+				}
 
-			for {
-				select {
-				case batch := <-a.jobs:
-					if len(batch) == 0 {
-						continue
-					}
-
-					if err := a.sender.SendBatch(ctx, batch); err != nil {
-						logger.Log.Error("send batch failed", zap.Error(err))
-					}
-
-				case <-ctx.Done():
-					logger.Log.Info("worker stopped", zap.Int("id", workerID))
-					return
+				if err := a.sender.SendBatch(ctx, batch); err != nil {
+					logger.Log.Error("send batch failed",
+						zap.Int("worker_id", workerID),
+						zap.Error(err),
+					)
 				}
 			}
-		}(i)
+
+			logger.Log.Info("worker stopped", zap.Int("worker_id", workerID))
+		})
 	}
 }
 
 func (a *Agent) StartRuntimeCollector(ctx context.Context, interval time.Duration) {
-	a.wg.Add(1)
-
-	go func() {
-		defer a.wg.Done()
-
+	a.runProducer(func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
@@ -144,15 +155,11 @@ func (a *Agent) StartRuntimeCollector(ctx context.Context, interval time.Duratio
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (a *Agent) StartSystemCollector(ctx context.Context, interval time.Duration) {
-	a.wg.Add(1)
-
-	go func() {
-		defer a.wg.Done()
-
+	a.runProducer(func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
@@ -174,8 +181,12 @@ func (a *Agent) StartSystemCollector(ctx context.Context, interval time.Duration
 				return
 			}
 		}
-	}()
+	})
 }
-func (a *Agent) Wait() {
-	a.wg.Wait()
+func (a *Agent) Stop() {
+	a.producersWG.Wait()
+
+	close(a.jobs)
+
+	a.workersWG.Wait()
 }

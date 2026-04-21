@@ -8,6 +8,8 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/hashutil"
 )
 
+const maxHashBodySize = 1 << 20
+
 type hashResponseWriter struct {
 	http.ResponseWriter
 	body   bytes.Buffer
@@ -56,13 +58,20 @@ func HashValidationMiddleware(key string) func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			body, err := io.ReadAll(r.Body)
+
+			limited := io.LimitReader(r.Body, maxHashBodySize+1)
+			body, err := io.ReadAll(limited)
 			if err != nil {
 				http.Error(w, "cannot read request body", http.StatusBadRequest)
 				return
 			}
 
 			r.Body.Close()
+
+			if len(body) > maxHashBodySize {
+				http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+				return
+			}
 
 			expectedHash := hashutil.ComputeHash(body, key)
 			receivedHash := r.Header.Get("HashSHA256")
