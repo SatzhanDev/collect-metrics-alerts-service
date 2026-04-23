@@ -2,35 +2,37 @@ package main
 
 import (
 	"context"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/agent"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
-	"go.uber.org/zap"
 )
 
 func main() {
 	cfg := parseFlags()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
 	storage := agent.NewMetricsStorage()
-	sender := agent.NewHTTPSender("http://" + cfg.Addr)
-	a := agent.NewAgent(storage, sender)
+	sender := agent.NewHTTPSender("http://"+cfg.Addr, cfg.Key)
+	a := agent.NewAgent(storage, sender, cfg.RateLimit)
 
-	go func() {
-		for {
-			a.Poll()
-			time.Sleep(cfg.PollInterval)
-		}
-	}()
+	a.StartWorkers(ctx, cfg.RateLimit)
+	a.StartRuntimeCollector(ctx, cfg.PollInterval)
+	a.StartSystemCollector(ctx, cfg.PollInterval)
 
-	for {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	<-sigCh
+	logger.Log.Info("shutting down agent")
 
-		if err := a.Report(ctx); err != nil {
-			logger.Log.Error("failed to report metric", zap.Error(err))
+	cancel()
+	a.Stop()
 
-		}
-		cancel()
-		time.Sleep(cfg.ReportInterval)
-	}
+	logger.Log.Info("graceful shutdown complete")
+
 }
