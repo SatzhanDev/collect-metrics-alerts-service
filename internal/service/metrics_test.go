@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,12 +14,16 @@ import (
 )
 
 func TestMetricsService_UpdateGauge_NoImmediateSave(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "metrics.json")
+
 	storage := mem.NewMemStorage()
+	fileStorage := file.NewJSONFileStorage()
+
 	cfg := config.ServerConfig{
-		FileStoragePath: "test_metrics.json",
+		FileStoragePath: tmpFile,
 		StoreInterval:   10 * time.Second,
 	}
-	fileStorage := file.NewJSONFileStorage()
 
 	svc := NewMetricsService(storage, fileStorage, cfg)
 
@@ -28,11 +33,14 @@ func TestMetricsService_UpdateGauge_NoImmediateSave(t *testing.T) {
 	value, err := storage.GetGauge(t.Context(), "cpu")
 	require.NoError(t, err)
 	assert.Equal(t, 12.5, value)
+
+	_, err = os.Stat(tmpFile)
+	assert.True(t, os.IsNotExist(err), "file should not be created when StoreInterval > 0")
 }
 
 func TestMetricsService_UpdateGauge_ImmediateSave(t *testing.T) {
-	tmpFile := "test_metrics_save.json"
-	defer os.Remove(tmpFile)
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "metrics.json")
 
 	storage := mem.NewMemStorage()
 	fileStorage := file.NewJSONFileStorage()
@@ -46,6 +54,10 @@ func TestMetricsService_UpdateGauge_ImmediateSave(t *testing.T) {
 
 	err := svc.UpdateGauge(t.Context(), "cpu", 99.9)
 	require.NoError(t, err)
+
+	value, err := storage.GetGauge(t.Context(), "cpu")
+	require.NoError(t, err)
+	assert.Equal(t, 99.9, value)
 
 	data, err := os.ReadFile(tmpFile)
 	require.NoError(t, err)
