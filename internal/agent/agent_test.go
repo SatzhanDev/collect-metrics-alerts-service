@@ -57,7 +57,7 @@ func (m *MockSender) SendBatch(ctx context.Context, metrics []models.Metrics) er
 func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
 	st := NewMetricsStorage()
 	mock := NewMockSender()
-	a := NewAgent(st, mock)
+	a := NewAgent(st, mock, 1)
 
 	a.Poll()
 
@@ -70,7 +70,7 @@ func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
 func TestAgent_Report_SendsSnapshotMetrics(t *testing.T) {
 	st := NewMetricsStorage()
 	mock := NewMockSender()
-	a := NewAgent(st, mock)
+	a := NewAgent(st, mock, 1)
 
 	_ = st.SetGauge("Alloc", 123.45)
 	_ = st.SetGauge("RandomValue", 0.99)
