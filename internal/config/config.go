@@ -10,6 +10,8 @@ type ServerConfig struct {
 	Restore         bool
 	DBDSN           string
 	Key             string
+	AuditFile       string
+	AuditURL        string
 }
 
 type ClientConfig struct {

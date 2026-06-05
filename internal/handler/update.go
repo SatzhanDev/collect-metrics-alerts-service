@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 	"github.com/go-chi/chi"
@@ -154,6 +156,15 @@ func (h *MetricsHandler) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 		logger.Log.Debug("cannot batch metrics", zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	event := audit.Event{
+		TS:        time.Now().Unix(),
+		Metrics:   collectMetricNames(req),
+		IPAddress: clientIP(r),
+	}
+	if h.audit != nil {
+		h.audit.Notify(r.Context(), event)
 	}
 
 	w.WriteHeader(http.StatusOK)

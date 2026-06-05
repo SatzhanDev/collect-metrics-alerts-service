@@ -29,6 +29,8 @@ func parseFlags() config.ServerConfig {
 	flag.BoolVar(&cfg.Restore, "r", false, "restore metrics from file")
 	flag.StringVar(&cfg.DBDSN, "d", "", "database dsn")
 	flag.StringVar(&cfg.Key, "k", "", "hash key")
+	flag.StringVar(&cfg.AuditFile, "audit-file", "", "audit file path")
+	flag.StringVar(&cfg.AuditURL, "audit-url", "", "audit receiver url")
 
 	flag.Parse()
 	cfg.StoreInterval = time.Duration(storeIntervalSec) * time.Second
@@ -61,6 +63,13 @@ func parseFlags() config.ServerConfig {
 	}
 	if envKey := os.Getenv("KEY"); envKey != "" {
 		cfg.Key = envKey
+	}
+
+	if v := os.Getenv("AUDIT_FILE"); v != "" {
+		cfg.AuditFile = v
+	}
+	if v := os.Getenv("AUDIT_URL"); v != "" {
+		cfg.AuditURL = v
 	}
 
 	return cfg

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config/db"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
@@ -87,8 +88,16 @@ func main() {
 			}
 		}()
 	}
+	auditPublisher := audit.NewPublisher(logger.Log)
+	if cfg.AuditFile != "" {
+		auditPublisher.Subscribe(audit.NewFileObserver(cfg.AuditFile))
+	}
 
-	h := handler.NewMetricsHandler(svc)
+	if cfg.AuditURL != "" {
+		auditPublisher.Subscribe(audit.NewHTTPObserver(cfg.AuditURL))
+	}
+
+	h := handler.NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Use(middleware.HashValidationMiddleware(cfg.Key))

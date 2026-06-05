@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
 	"github.com/go-chi/chi"
 	"github.com/stretchr/testify/require"
@@ -69,7 +71,8 @@ func (m *mockMetricsService) Ping(ctx context.Context) error {
 }
 func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	auditPublisher := audit.NewPublisher(logger.Log)
+	h := NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -85,7 +88,8 @@ func TestMetricsHandler_Update_MethodNotAllowed(t *testing.T) {
 
 func TestMetricsHandler_Update_NotFound_WhenMissingParts(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	auditPublisher := audit.NewPublisher(logger.Log)
+	h := NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -102,7 +106,8 @@ func TestMetricsHandler_Update_NotFound_WhenMissingParts(t *testing.T) {
 
 func TestMetricsHandler_Update_BadRequest_WhenInvalidType(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	auditPublisher := audit.NewPublisher(logger.Log)
+	h := NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -118,7 +123,8 @@ func TestMetricsHandler_Update_BadRequest_WhenInvalidType(t *testing.T) {
 }
 func TestMetricsHandler_Update_BadRequest_WhenGaugeValueInvalid(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	auditPublisher := audit.NewPublisher(logger.Log)
+	h := NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -135,7 +141,8 @@ func TestMetricsHandler_Update_BadRequest_WhenGaugeValueInvalid(t *testing.T) {
 
 func TestMetricsHandler_Update_OK_Gauge(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	auditPublisher := audit.NewPublisher(logger.Log)
+	h := NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
@@ -154,7 +161,8 @@ func TestMetricsHandler_Update_OK_Gauge(t *testing.T) {
 
 func TestMetricsHandler_Update_OK_Counter(t *testing.T) {
 	svc := newMockMetricsService()
-	h := NewMetricsHandler(svc)
+	auditPublisher := audit.NewPublisher(logger.Log)
+	h := NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
 	r.Post("/update/{type}/{name}/{value}", h.Update)
