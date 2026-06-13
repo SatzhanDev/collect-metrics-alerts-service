@@ -376,3 +376,46 @@ func TestMetricsHandler_UpdateBatch_EmptyID(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, rr.Code)
 }
+
+func TestMetricsHandler_UpdateBatch_InvalidMetricType(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/updates",
+		strings.NewReader(`[
+			{
+				"id":"Alloc",
+				"type":"invalid"
+			}
+		]`),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateBatch(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+}
+func TestMetricsHandler_UpdateBatch_NilGaugeValue(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/updates",
+		strings.NewReader(`[
+			{
+				"id":"Alloc",
+				"type":"gauge"
+			}
+		]`),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateBatch(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+}
