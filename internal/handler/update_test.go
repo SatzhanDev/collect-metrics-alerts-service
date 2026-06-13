@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
@@ -177,4 +178,201 @@ func TestMetricsHandler_Update_OK_Counter(t *testing.T) {
 
 	require.Equal(t, int64(3), svc.counters["PollCount"])
 
+}
+
+func TestMetricsHandler_UpdateJSON_Gauge_OK(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	body := `{
+		"id":"Alloc",
+		"type":"gauge",
+		"value":123.45
+	}`
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/update",
+		strings.NewReader(body),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateJSON(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, 123.45, svc.gauges["Alloc"])
+}
+
+func TestMetricsHandler_UpdateJSON_Counter_OK(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	body := `{
+		"id":"PollCount",
+		"type":"counter",
+		"delta":5
+	}`
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/update",
+		strings.NewReader(body),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateJSON(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.Equal(t, int64(5), svc.counters["PollCount"])
+}
+
+func TestMetricsHandler_UpdateJSON_BadJSON(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/update",
+		strings.NewReader("{invalid"),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateJSON(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestMetricsHandler_UpdateJSON_EmptyID(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	body := `{
+		"id":"",
+		"type":"gauge",
+		"value":1
+	}`
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/update",
+		strings.NewReader(body),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateJSON(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestMetricsHandler_UpdateJSON_InvalidType(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	body := `{
+		"id":"test",
+		"type":"unknown"
+	}`
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/update",
+		strings.NewReader(body),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateJSON(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestMetricsHandler_UpdateBatch_OK(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	body := `[
+		{
+			"id":"Alloc",
+			"type":"gauge",
+			"value":123.45
+		},
+		{
+			"id":"PollCount",
+			"type":"counter",
+			"delta":5
+		}
+	]`
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/updates",
+		strings.NewReader(body),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateBatch(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestMetricsHandler_UpdateBatch_EmptyArray(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/updates",
+		strings.NewReader(`[]`),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateBatch(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestMetricsHandler_UpdateBatch_InvalidJSON(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/updates",
+		strings.NewReader(`{invalid`),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateBatch(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestMetricsHandler_UpdateBatch_EmptyID(t *testing.T) {
+	svc := newMockMetricsService()
+	h := NewMetricsHandler(svc, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/updates",
+		strings.NewReader(`[
+			{
+				"id":"",
+				"type":"gauge",
+				"value":1
+			}
+		]`),
+	)
+
+	rr := httptest.NewRecorder()
+
+	h.UpdateBatch(rr, req)
+
+	require.Equal(t, http.StatusBadRequest, rr.Code)
 }

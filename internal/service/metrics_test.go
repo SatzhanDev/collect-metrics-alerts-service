@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/file"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/mem"
 	"github.com/stretchr/testify/assert"
@@ -64,4 +65,186 @@ func TestMetricsService_UpdateGauge_ImmediateSave(t *testing.T) {
 
 	assert.Contains(t, string(data), `"id":"cpu"`)
 	assert.Contains(t, string(data), `"value":99.9`)
+}
+
+func TestMetricsService_UpdateCounter(t *testing.T) {
+	storage := mem.NewMemStorage()
+
+	svc := NewMetricsService(
+		storage,
+		nil,
+		config.ServerConfig{},
+	)
+
+	err := svc.UpdateCounter(t.Context(), "PollCount", 10)
+	require.NoError(t, err)
+
+	err = svc.UpdateCounter(t.Context(), "PollCount", 5)
+	require.NoError(t, err)
+
+	value, err := svc.GetCounter(t.Context(), "PollCount")
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(15), value)
+}
+
+func TestMetricsService_GetGauge(t *testing.T) {
+	storage := mem.NewMemStorage()
+
+	err := storage.UpdateGauge(t.Context(), "Alloc", 123.45)
+	require.NoError(t, err)
+
+	svc := NewMetricsService(
+		storage,
+		nil,
+		config.ServerConfig{},
+	)
+
+	value, err := svc.GetGauge(t.Context(), "Alloc")
+	require.NoError(t, err)
+
+	assert.Equal(t, 123.45, value)
+}
+
+func TestMetricsService_GetCounter(t *testing.T) {
+	storage := mem.NewMemStorage()
+
+	err := storage.UpdateCounter(t.Context(), "PollCount", 77)
+	require.NoError(t, err)
+
+	svc := NewMetricsService(
+		storage,
+		nil,
+		config.ServerConfig{},
+	)
+
+	value, err := svc.GetCounter(t.Context(), "PollCount")
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(77), value)
+}
+
+func TestMetricsService_GetAll(t *testing.T) {
+	storage := mem.NewMemStorage()
+
+	require.NoError(t, storage.UpdateGauge(t.Context(), "Alloc", 1.5))
+	require.NoError(t, storage.UpdateCounter(t.Context(), "PollCount", 3))
+
+	svc := NewMetricsService(
+		storage,
+		nil,
+		config.ServerConfig{},
+	)
+
+	gauges, counters, err := svc.GetAll(t.Context())
+
+	require.NoError(t, err)
+
+	assert.Equal(t, 1.5, gauges["Alloc"])
+	assert.Equal(t, int64(3), counters["PollCount"])
+}
+
+func TestMetricsService_Ping(t *testing.T) {
+	storage := mem.NewMemStorage()
+
+	svc := NewMetricsService(
+		storage,
+		nil,
+		config.ServerConfig{},
+	)
+
+	err := svc.Ping(t.Context())
+	require.NoError(t, err)
+}
+
+func TestMetricsService_UpdateBatch(t *testing.T) {
+	storage := mem.NewMemStorage()
+
+	svc := NewMetricsService(
+		storage,
+		nil,
+		config.ServerConfig{},
+	)
+
+	value := 100.5
+	delta := int64(10)
+
+	metrics := []models.Metrics{
+		{
+			ID:    "Alloc",
+			MType: models.Gauge,
+			Value: &value,
+		},
+		{
+			ID:    "PollCount",
+			MType: models.Counter,
+			Delta: &delta,
+		},
+	}
+
+	err := svc.UpdateBatch(t.Context(), metrics)
+	require.NoError(t, err)
+
+	gauge, err := storage.GetGauge(t.Context(), "Alloc")
+	require.NoError(t, err)
+	assert.Equal(t, value, gauge)
+
+	counter, err := storage.GetCounter(t.Context(), "PollCount")
+	require.NoError(t, err)
+	assert.Equal(t, delta, counter)
+}
+func TestMetricsService_RestoreFromFile(t *testing.T) {
+	tmpFile := filepath.Join(
+		t.TempDir(),
+		"metrics.json",
+	)
+
+	fileStorage := file.NewJSONFileStorage()
+	memStorage := mem.NewMemStorage()
+
+	value := 123.45
+	delta := int64(7)
+
+	err := fileStorage.SaveToFile(
+		t.Context(),
+		tmpFile,
+		[]models.Metrics{
+			{
+				ID:    "Alloc",
+				MType: models.Gauge,
+				Value: &value,
+			},
+			{
+				ID:    "PollCount",
+				MType: models.Counter,
+				Delta: &delta,
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	svc := NewMetricsService(
+		memStorage,
+		fileStorage,
+		config.ServerConfig{
+			FileStoragePath: tmpFile,
+		},
+	)
+
+	err = svc.RestoreFromFile(t.Context())
+	require.NoError(t, err)
+
+	gauge, err := memStorage.GetGauge(
+		t.Context(),
+		"Alloc",
+	)
+	require.NoError(t, err)
+	require.Equal(t, value, gauge)
+
+	counter, err := memStorage.GetCounter(
+		t.Context(),
+		"PollCount",
+	)
+	require.NoError(t, err)
+	require.Equal(t, delta, counter)
 }
