@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/hashutil"
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 )
 
 type Sender interface {

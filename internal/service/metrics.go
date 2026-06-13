@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config"
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 )
 
@@ -107,7 +107,11 @@ func (s *MetricsService) SaveToFile(ctx context.Context) error {
 		return err
 	}
 
-	var metrics []models.Metrics
+	metrics := make(
+		[]models.Metrics,
+		0,
+		len(gauges)+len(counters),
+	)
 
 	for id, value := range gauges {
 		v := value

@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 )

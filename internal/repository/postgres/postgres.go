@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 )
 
 var ErrMetricNotFound = errors.New("metric is not found")

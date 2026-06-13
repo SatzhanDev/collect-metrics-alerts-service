@@ -8,7 +8,7 @@ import (
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 )
@@ -163,6 +163,7 @@ func (h *MetricsHandler) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 		Metrics:   collectMetricNames(req),
 		IPAddress: clientIP(r),
 	}
+
 	if h.audit != nil {
 		h.audit.Notify(r.Context(), event)
 	}

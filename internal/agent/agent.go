@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"go.uber.org/zap"
 )
 

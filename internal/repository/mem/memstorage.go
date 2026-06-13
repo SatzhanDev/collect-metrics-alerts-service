@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 )
 
 type MemStorage struct {

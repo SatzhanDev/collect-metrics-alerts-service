@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/http"
 
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 )
 
 func collectMetricNames(metrics []models.Metrics) []string {
@@ -13,7 +13,6 @@ func collectMetricNames(metrics []models.Metrics) []string {
 	for _, metric := range metrics {
 		names = append(names, metric.ID)
 	}
-
 	return names
 }
 
@@ -22,6 +21,5 @@ func clientIP(r *http.Request) string {
 	if err != nil {
 		return r.RemoteAddr
 	}
-
 	return host
 }

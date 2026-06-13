@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config/db"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
@@ -29,6 +31,14 @@ func main() {
 		log.Fatal(err)
 	}
 	defer logger.Log.Sync()
+
+	go func() {
+		logger.Log.Info("pprof server running", zap.String("address", "localhost:6060"))
+
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			logger.Log.Error("pprof server error", zap.Error(err))
+		}
+	}()
 
 	var (
 		storage     repository.Storage

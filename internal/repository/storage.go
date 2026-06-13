@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/model"
+	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 )
 
 type Storage interface {

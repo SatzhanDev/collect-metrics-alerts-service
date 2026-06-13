@@ -5,7 +5,14 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 )
+
+var gzipWriterPool = sync.Pool{
+	New: func() any {
+		return gzip.NewWriter(io.Discard)
+	},
+}
 
 type compressWriter struct {
 	w           http.ResponseWriter
@@ -36,7 +43,9 @@ func (c *compressWriter) WriteHeader(statusCode int) {
 		c.compress = true
 		c.w.Header().Set("Content-Encoding", "gzip")
 		c.w.Header().Del("Content-Length")
-		c.zw = gzip.NewWriter(c.w)
+
+		c.zw = gzipWriterPool.Get().(*gzip.Writer)
+		c.zw.Reset(c.w)
 	}
 	c.w.WriteHeader(statusCode)
 }
@@ -58,7 +67,12 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 
 func (c *compressWriter) Close() error {
 	if c.compress && c.zw != nil {
-		return c.zw.Close()
+		if err := c.zw.Close(); err != nil {
+			return err
+		}
+		c.zw.Reset(io.Discard)
+		gzipWriterPool.Put(c.zw)
+		c.zw = nil
 	}
 	return nil
 }
