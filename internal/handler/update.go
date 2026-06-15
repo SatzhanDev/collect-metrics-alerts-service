@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Update обновляет значение метрики, переданное через URL-параметры /update/{type}/{name}/{value}.
 func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	mType := chi.URLParam(r, "type")
@@ -49,6 +50,8 @@ func (h *MetricsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 }
+
+// UpdateJSON обновляет значение метрики из JSON-тела запроса POST /update/.
 func (h *MetricsHandler) UpdateJSON(w http.ResponseWriter, r *http.Request) {
 
 	var req, resp models.Metrics
@@ -113,6 +116,7 @@ func (h *MetricsHandler) UpdateJSON(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// UpdateBatch сохраняет набор метрик из JSON-массива в теле запроса POST /updates/.
 func (h *MetricsHandler) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 	var req []models.Metrics
 
@@ -158,13 +162,12 @@ func (h *MetricsHandler) UpdateBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event := audit.Event{
-		TS:        time.Now().Unix(),
-		Metrics:   collectMetricNames(req),
-		IPAddress: clientIP(r),
-	}
-
-	if h.audit != nil {
+	if h.audit != nil && h.audit.Enabled() {
+		event := audit.Event{
+			TS:        time.Now().Unix(),
+			Metrics:   collectMetricNames(req),
+			IPAddress: clientIP(r),
+		}
 		h.audit.Notify(r.Context(), event)
 	}
 

@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Value возвращает текущее значение метрики по URL-параметрам GET /value/{type}/{name}.
 func (h *MetricsHandler) Value(w http.ResponseWriter, r *http.Request) {
 
 	mType := chi.URLParam(r, "type")
@@ -49,6 +50,7 @@ func (h *MetricsHandler) Value(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// ValueJSON возвращает текущее значение метрики из JSON-тела запроса POST /value/.
 func (h *MetricsHandler) ValueJSON(w http.ResponseWriter, r *http.Request) {
 
 	var req, resp models.Metrics

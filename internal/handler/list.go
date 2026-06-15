@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// GetList возвращает HTML-страницу со списком всех текущих метрик GET /.
 func (h *MetricsHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)

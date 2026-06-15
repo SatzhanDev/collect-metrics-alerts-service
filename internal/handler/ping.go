@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Ping проверяет доступность хранилища и возвращает 200 OK при успехе GET /ping.
 func (h *MetricsHandler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
 	defer cancel()

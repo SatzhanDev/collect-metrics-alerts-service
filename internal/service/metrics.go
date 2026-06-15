@@ -8,23 +8,36 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 )
 
+// MetricsService реализует бизнес-логику работы с метриками.
 type MetricsService struct {
 	storage     repository.Storage
 	filestorage repository.FileStorage
 	cfg         config.ServerConfig
 }
+
+// Service описывает операции бизнес-логики сервиса метрик.
 type Service interface {
+	// UpdateGauge сохраняет значение gauge-метрики с именем name.
 	UpdateGauge(ctx context.Context, name string, value float64) error
+	// UpdateCounter прибавляет delta к значению counter-метрики с именем name.
 	UpdateCounter(ctx context.Context, name string, delta int64) error
+	// GetGauge возвращает текущее значение gauge-метрики с именем name.
 	GetGauge(ctx context.Context, name string) (float64, error)
+	// GetCounter возвращает текущее значение counter-метрики с именем name.
 	GetCounter(ctx context.Context, name string) (int64, error)
+	// GetAll возвращает все gauge- и counter-метрики.
 	GetAll(ctx context.Context) (map[string]float64, map[string]int64, error)
+	// RestoreFromFile загружает метрики из файла в хранилище.
 	RestoreFromFile(ctx context.Context) error
+	// SaveToFile сохраняет текущие метрики из хранилища в файл.
 	SaveToFile(ctx context.Context) error
+	// UpdateBatch сохраняет набор метрик одним пакетным запросом.
 	UpdateBatch(ctx context.Context, metrics []models.Metrics) error
+	// Ping проверяет доступность хранилища.
 	Ping(ctx context.Context) error
 }
 
+// NewMetricsService создаёт новый MetricsService с указанным хранилищем и конфигурацией.
 func NewMetricsService(storage repository.Storage, filestorage repository.FileStorage, cfg config.ServerConfig) Service {
 	return &MetricsService{
 		storage:     storage,
