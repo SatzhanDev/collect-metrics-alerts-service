@@ -7,6 +7,9 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "net/http/pprof"
@@ -98,11 +101,11 @@ func main() {
 			}
 		}()
 	}
+
 	auditPublisher := audit.NewPublisher(logger.Log)
 	if cfg.AuditFile != "" {
 		auditPublisher.Subscribe(audit.NewFileObserver(cfg.AuditFile))
 	}
-
 	if cfg.AuditURL != "" {
 		auditPublisher.Subscribe(audit.NewHTTPObserver(cfg.AuditURL))
 	}
@@ -131,13 +134,46 @@ func main() {
 	r.Get("/ping", h.Ping)
 
 	addr := normalizeAddr(cfg.Addr)
-
-	logger.Log.Info("Running server", zap.String("address", cfg.Addr))
-	if err := http.ListenAndServe(addr, r); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: r,
 	}
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+
+	go func() {
+		logger.Log.Info("Running server", zap.String("address", cfg.Addr))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	<-quit
+	logger.Log.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if fileStorage != nil {
+		if err := svc.SaveToFile(ctx); err != nil {
+			logger.Log.Error("failed to save metrics on shutdown", zap.Error(err))
+		}
+	}
+
+	if dbConn != nil {
+		if err := dbConn.Close(); err != nil {
+			logger.Log.Error("failed to close db connection", zap.Error(err))
+		}
+	}
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Log.Error("server shutdown error", zap.Error(err))
+	}
+
+	logger.Log.Info("Server stopped")
 }
+
 func normalizeAddr(in string) string {
 	host, port, err := net.SplitHostPort(in)
 	if err != nil {
