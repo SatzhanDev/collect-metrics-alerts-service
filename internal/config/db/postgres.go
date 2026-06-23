@@ -30,8 +30,8 @@ func NewPostgres(cfg Config) (*sql.DB, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		if err := db.Close(); err != nil {
-			logger.Log.Error("failed to close database connection", zap.Error(err))
+		if closeErr := db.Close(); closeErr != nil {
+			logger.Log.Error("failed to close database connection", zap.Error(closeErr))
 		}
 		return nil, err
 	}

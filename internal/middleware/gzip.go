@@ -1,3 +1,4 @@
+// Package middleware содержит HTTP-middleware для сжатия и валидации хэшей.
 package middleware
 
 import (

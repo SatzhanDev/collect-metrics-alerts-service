@@ -10,6 +10,8 @@ const (
 
 // Metrics представляет единицу метрики, передаваемую между агентом и сервером.
 // Delta и Value объявлены через указатели, чтобы отличать значение "0" от незаданного.
+//
+// generate:reset
 type Metrics struct {
 	ID    string   `json:"id"`              // ID — имя метрики.
 	MType string   `json:"type"`            // MType — тип метрики: counter или gauge.

@@ -1,3 +1,4 @@
+// Package logger предоставляет глобальный логгер и HTTP-middleware для логирования запросов.
 package logger
 
 import (

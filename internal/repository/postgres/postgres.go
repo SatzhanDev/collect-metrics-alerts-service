@@ -1,3 +1,4 @@
+// Package postgres реализует хранилище метрик на основе PostgreSQL.
 package postgres
 
 import (

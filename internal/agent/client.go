@@ -163,10 +163,10 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 	}
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
-	if _, err := gz.Write(body); err != nil {
+	if _, err = gz.Write(body); err != nil {
 		return err
 	}
-	if err := gz.Close(); err != nil {
+	if err = gz.Close(); err != nil {
 		return err
 	}
 

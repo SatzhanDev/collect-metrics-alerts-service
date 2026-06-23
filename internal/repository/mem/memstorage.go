@@ -1,3 +1,4 @@
+// Package mem реализует хранилище метрик в оперативной памяти.
 package mem
 
 import (

@@ -1,3 +1,4 @@
+// Package file реализует хранилище метрик на основе JSON-файла.
 package file
 
 import (

@@ -1,3 +1,4 @@
+// Package config содержит конфигурационные структуры сервера и агента.
 package config
 
 import "time"

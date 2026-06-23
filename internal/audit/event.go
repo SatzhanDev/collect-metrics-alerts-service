@@ -2,6 +2,8 @@
 package audit
 
 // Event описывает событие изменения метрик, фиксируемое системой аудита.
+//
+// generate:reset
 type Event struct {
 	TS        int64    `json:"ts"`         // TS — Unix-время события.
 	Metrics   []string `json:"metrics"`    // Metrics — имена изменённых метрик.

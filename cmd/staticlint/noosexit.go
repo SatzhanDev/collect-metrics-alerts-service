@@ -2,6 +2,7 @@ package main
 
 import (
 	"go/ast"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -25,6 +26,12 @@ func runNoOsExit(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	for _, file := range pass.Files {
+		// Пропускаем файлы из кэша сборки Go (например, сгенерированные тестовые main-пакеты)
+		pos := pass.Fset.Position(file.Pos())
+		if !strings.HasSuffix(pos.Filename, ".go") || strings.Contains(pos.Filename, "go-build") {
+			continue
+		}
+
 		for _, decl := range file.Decls {
 			// Ищем функцию main
 			funcDecl, ok := decl.(*ast.FuncDecl)
