@@ -28,3 +28,14 @@ func TestPublisher_Notify(t *testing.T) {
 
 	require.True(t, mock.called)
 }
+
+func TestPublisher_Enabled_NoObservers(t *testing.T) {
+	pub := NewPublisher(zap.NewNop())
+	require.False(t, pub.Enabled())
+}
+
+func TestPublisher_Enabled_WithObserver(t *testing.T) {
+	pub := NewPublisher(zap.NewNop())
+	pub.Subscribe(&mockObserver{})
+	require.True(t, pub.Enabled())
+}

@@ -67,6 +67,72 @@ func TestAgent_Poll_IncrementsPollCount_AndSetsRandomValue(t *testing.T) {
 	assert.Contains(t, gauges, "RandomValue")
 
 }
+func TestAgent_CollectRuntimeBatch_AfterPoll(t *testing.T) {
+	st := NewMetricsStorage()
+	mock := NewMockSender()
+	a := NewAgent(st, mock, 1)
+
+	a.Poll()
+
+	batch := a.CollectRuntimeBatch()
+
+	assert.NotEmpty(t, batch)
+
+	var foundRandom, foundPollCount bool
+	for _, m := range batch {
+		if m.ID == "RandomValue" && m.MType == models.Gauge {
+			foundRandom = true
+		}
+		if m.ID == "PollCount" && m.MType == models.Counter {
+			foundPollCount = true
+		}
+	}
+	assert.True(t, foundRandom, "должен содержать RandomValue")
+	assert.True(t, foundPollCount, "должен содержать PollCount")
+}
+
+func TestAgent_CollectRuntimeBatch_Empty(t *testing.T) {
+	st := NewMetricsStorage()
+	mock := NewMockSender()
+	a := NewAgent(st, mock, 1)
+
+	// Без Poll хранилище пустое
+	batch := a.CollectRuntimeBatch()
+	assert.Empty(t, batch)
+}
+
+func TestAgent_Stop_NoWorkers(t *testing.T) {
+	st := NewMetricsStorage()
+	mock := NewMockSender()
+	a := NewAgent(st, mock, 1)
+
+	// Stop без запущенных воркеров не должен паниковать
+	a.Stop()
+}
+
+func TestAgent_CollectSystemBatch(t *testing.T) {
+	st := NewMetricsStorage()
+	mock := NewMockSender()
+	a := NewAgent(st, mock, 1)
+
+	batch, err := a.CollectSystemBatch(t.Context())
+	require.NoError(t, err)
+	assert.NotEmpty(t, batch)
+
+	// Должны быть TotalMemory и FreeMemory
+	var hasTotal, hasFree bool
+	for _, m := range batch {
+		if m.ID == "TotalMemory" {
+			hasTotal = true
+		}
+		if m.ID == "FreeMemory" {
+			hasFree = true
+		}
+	}
+	assert.True(t, hasTotal, "должен содержать TotalMemory")
+	assert.True(t, hasFree, "должен содержать FreeMemory")
+}
+
 func TestAgent_Report_SendsSnapshotMetrics(t *testing.T) {
 	st := NewMetricsStorage()
 	mock := NewMockSender()

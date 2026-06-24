@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +15,44 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// errStorage — хранилище, всегда возвращающее ошибку (для тестирования error-веток).
+type errStorage struct{}
+
+func (e errStorage) UpdateGauge(_ context.Context, _ string, _ float64) error {
+	return errors.New("storage error")
+}
+func (e errStorage) UpdateCounter(_ context.Context, _ string, _ int64) error {
+	return errors.New("storage error")
+}
+func (e errStorage) GetGauge(_ context.Context, _ string) (float64, error) {
+	return 0, errors.New("storage error")
+}
+func (e errStorage) GetCounter(_ context.Context, _ string) (int64, error) {
+	return 0, errors.New("storage error")
+}
+func (e errStorage) GetAll(_ context.Context) (map[string]float64, map[string]int64, error) {
+	return nil, nil, errors.New("storage error")
+}
+func (e errStorage) SetAll(_ context.Context, _ map[string]float64, _ map[string]int64) error {
+	return errors.New("storage error")
+}
+func (e errStorage) UpdateBatch(_ context.Context, _ []models.Metrics) error {
+	return errors.New("storage error")
+}
+func (e errStorage) Ping(_ context.Context) error {
+	return errors.New("storage error")
+}
+
+// errFileStorage — файловое хранилище, всегда возвращающее ошибку.
+type errFileStorage struct{}
+
+func (e errFileStorage) RestoreFromFile(_ context.Context, _ string) ([]models.Metrics, error) {
+	return nil, errors.New("file storage error")
+}
+func (e errFileStorage) SaveToFile(_ context.Context, _ string, _ []models.Metrics) error {
+	return errors.New("file storage error")
+}
 
 func TestMetricsService_UpdateGauge_NoImmediateSave(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -86,6 +126,28 @@ func TestMetricsService_UpdateCounter(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(15), value)
+}
+
+func TestMetricsService_UpdateCounter_ImmediateSave(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "metrics.json")
+
+	storage := mem.NewMemStorage()
+	fileStorage := file.NewJSONFileStorage()
+
+	svc := NewMetricsService(storage, fileStorage, config.ServerConfig{
+		FileStoragePath: tmpFile,
+		StoreInterval:   0,
+	})
+
+	err := svc.UpdateCounter(t.Context(), "PollCount", 42)
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(tmpFile)
+	require.NoError(t, err)
+
+	assert.Contains(t, string(data), `"PollCount"`)
+	assert.Contains(t, string(data), `"counter"`)
 }
 
 func TestMetricsService_GetGauge(t *testing.T) {
@@ -247,4 +309,63 @@ func TestMetricsService_RestoreFromFile(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, delta, counter)
+}
+
+// ─── Error branch tests using errStorage ──────────────────────────────────
+
+func TestMetricsService_UpdateGauge_StorageError(t *testing.T) {
+	svc := NewMetricsService(errStorage{}, nil, config.ServerConfig{})
+	err := svc.UpdateGauge(t.Context(), "cpu", 1.0)
+	require.Error(t, err)
+}
+
+func TestMetricsService_UpdateCounter_StorageError(t *testing.T) {
+	svc := NewMetricsService(errStorage{}, nil, config.ServerConfig{})
+	err := svc.UpdateCounter(t.Context(), "PollCount", 5)
+	require.Error(t, err)
+}
+
+func TestMetricsService_UpdateCounter_NoImmediateSave(t *testing.T) {
+	// StoreInterval > 0: сохранять сразу НЕ надо → return nil
+	storage := mem.NewMemStorage()
+	svc := NewMetricsService(storage, nil, config.ServerConfig{
+		StoreInterval: 10 * time.Second,
+	})
+	err := svc.UpdateCounter(t.Context(), "PollCount", 3)
+	require.NoError(t, err)
+}
+
+func TestMetricsService_GetGauge_StorageError(t *testing.T) {
+	svc := NewMetricsService(errStorage{}, nil, config.ServerConfig{})
+	_, err := svc.GetGauge(t.Context(), "cpu")
+	require.Error(t, err)
+}
+
+func TestMetricsService_GetCounter_StorageError(t *testing.T) {
+	svc := NewMetricsService(errStorage{}, nil, config.ServerConfig{})
+	_, err := svc.GetCounter(t.Context(), "PollCount")
+	require.Error(t, err)
+}
+
+func TestMetricsService_GetAll_StorageError(t *testing.T) {
+	svc := NewMetricsService(errStorage{}, nil, config.ServerConfig{})
+	_, _, err := svc.GetAll(t.Context())
+	require.Error(t, err)
+}
+
+func TestMetricsService_RestoreFromFile_FileStorageError(t *testing.T) {
+	svc := NewMetricsService(mem.NewMemStorage(), errFileStorage{}, config.ServerConfig{
+		FileStoragePath: "/some/path",
+	})
+	err := svc.RestoreFromFile(t.Context())
+	require.Error(t, err)
+}
+
+func TestMetricsService_SaveToFile_StorageError(t *testing.T) {
+	// GetAll возвращает ошибку → SaveToFile должен её вернуть
+	svc := NewMetricsService(errStorage{}, file.NewJSONFileStorage(), config.ServerConfig{
+		FileStoragePath: "/tmp/metrics_test.json",
+	})
+	err := svc.SaveToFile(t.Context())
+	require.Error(t, err)
 }
