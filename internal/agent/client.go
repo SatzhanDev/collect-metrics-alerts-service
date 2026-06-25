@@ -12,7 +12,15 @@ import (
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/hashutil"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/pool"
 )
+
+// bufPool — пул bytes.Buffer для повторного использования.
+// bytes.Buffer уже имеет метод Reset() в стандартной библиотеке,
+// поэтому он автоматически удовлетворяет интерфейсу Resettable.
+var bufPool = pool.New(func() *bytes.Buffer {
+	return &bytes.Buffer{}
+})
 
 type Sender interface {
 	SendGauge(name string, value float64) error
@@ -56,18 +64,21 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 
 	url := s.serverAddr + "/update"
 
-	var buffer bytes.Buffer
+	// Берём buffer из пула вместо создания нового
+	buffer := bufPool.Get()
+	defer bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
+
 	req := models.Metrics{
 		ID:    name,
 		MType: models.Gauge,
 		Value: &value,
 	}
 
-	if err := json.NewEncoder(&buffer).Encode(req); err != nil {
+	if err := json.NewEncoder(buffer).Encode(req); err != nil {
 		return err
 	}
 
-	response, err := http.Post(url, "application/json", &buffer)
+	response, err := http.Post(url, "application/json", buffer)
 	if err != nil {
 		return err
 	}
@@ -105,18 +116,21 @@ func (s *HTTPSender) SendCounter(name string, value int64) error {
 func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 	url := s.serverAddr + "/update"
 
-	var buffer bytes.Buffer
+	// Берём buffer из пула вместо создания нового
+	buffer := bufPool.Get()
+	defer bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
+
 	req := models.Metrics{
 		ID:    name,
 		MType: models.Counter,
 		Delta: &value,
 	}
 
-	if err := json.NewEncoder(&buffer).Encode(req); err != nil {
+	if err := json.NewEncoder(buffer).Encode(req); err != nil {
 		return err
 	}
 
-	resp, err := http.Post(url, "application/json", &buffer)
+	resp, err := http.Post(url, "application/json", buffer)
 	if err != nil {
 		return err
 	}
@@ -161,8 +175,11 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 	if err != nil {
 		return err
 	}
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
+	// Берём buffer из пула вместо создания нового
+	buf := bufPool.Get()
+	defer bufPool.Put(buf) // Reset() вызовется автоматически при возврате
+
+	gz := gzip.NewWriter(buf)
 	if _, err = gz.Write(body); err != nil {
 		return err
 	}
@@ -174,7 +191,7 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 		ctx,
 		http.MethodPost,
 		s.serverAddr+"/updates/",
-		&buf,
+		buf,
 	)
 	if err != nil {
 		return err
