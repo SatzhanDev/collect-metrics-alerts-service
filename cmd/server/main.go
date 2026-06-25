@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -28,7 +29,26 @@ import (
 	"go.uber.org/zap"
 )
 
+// Переменные заполняются при сборке через -ldflags "-X main.buildVersion=v1.0.0 ..."
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
+// na возвращает значение переменной или "N/A" если она пустая.
+func na(s string) string {
+	if s == "" {
+		return "N/A"
+	}
+	return s
+}
+
 func main() {
+	fmt.Printf("Build version: %s\n", na(buildVersion))
+	fmt.Printf("Build date: %s\n", na(buildDate))
+	fmt.Printf("Build commit: %s\n", na(buildCommit))
+
 	cfg := parseFlags()
 	if err := logger.Initialize(cfg.LogLevel); err != nil {
 		log.Fatal(err)

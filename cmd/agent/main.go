@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,7 +11,26 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 )
 
+// Переменные заполняются при сборке через -ldflags "-X main.buildVersion=v1.0.0 ..."
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
+// na возвращает значение переменной или "N/A" если она пустая.
+func na(s string) string {
+	if s == "" {
+		return "N/A"
+	}
+	return s
+}
+
 func main() {
+	fmt.Printf("Build version: %s\n", na(buildVersion))
+	fmt.Printf("Build date: %s\n", na(buildDate))
+	fmt.Printf("Build commit: %s\n", na(buildCommit))
+
 	cfg := parseFlags()
 
 	ctx, cancel := context.WithCancel(context.Background())
