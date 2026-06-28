@@ -8,28 +8,14 @@ import (
 	"syscall"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/agent"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/buildinfo"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 )
 
-// Переменные заполняются при сборке через -ldflags "-X main.buildVersion=v1.0.0 ..."
-var (
-	buildVersion string
-	buildDate    string
-	buildCommit  string
-)
-
-// na возвращает значение переменной или "N/A" если она пустая.
-func na(s string) string {
-	if s == "" {
-		return "N/A"
-	}
-	return s
-}
-
 func main() {
-	fmt.Printf("Build version: %s\n", na(buildVersion))
-	fmt.Printf("Build date: %s\n", na(buildDate))
-	fmt.Printf("Build commit: %s\n", na(buildCommit))
+	fmt.Printf("Build version: %s\n", buildinfo.NA(buildinfo.Version))
+	fmt.Printf("Build date: %s\n", buildinfo.NA(buildinfo.Date))
+	fmt.Printf("Build commit: %s\n", buildinfo.NA(buildinfo.Commit))
 
 	cfg := parseFlags()
 

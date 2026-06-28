@@ -49,17 +49,17 @@ func TestHasResetComment_MultipleComments(t *testing.T) {
 // ─── receiverName ─────────────────────────────────────────────────────────
 
 func TestReceiverName_Normal(t *testing.T) {
-	assert.Equal(t, "m", receiverName("Metrics"))
-	assert.Equal(t, "e", receiverName("Event"))
-	assert.Equal(t, "s", receiverName("Server"))
+	assert.Equal(t, "metrics", receiverName("Metrics"))
+	assert.Equal(t, "event", receiverName("Event"))
+	assert.Equal(t, "server", receiverName("Server"))
 }
 
 func TestReceiverName_Empty(t *testing.T) {
-	assert.Equal(t, "s", receiverName(""))
+	assert.Equal(t, "v", receiverName(""))
 }
 
 func TestReceiverName_Lowercase(t *testing.T) {
-	assert.Equal(t, "m", receiverName("myStruct"))
+	assert.Equal(t, "mystruct", receiverName("myStruct"))
 }
 
 // ─── fieldResetLine ────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ type MyStruct struct {
 	assert.Equal(t, "testpkg", pkgName)
 	require.Len(t, structs, 1)
 	assert.Equal(t, "MyStruct", structs[0].Name)
-	assert.Equal(t, "m", structs[0].Receiver)
+	assert.Equal(t, "mystruct", structs[0].Receiver)
 	assert.Len(t, structs[0].Fields, 2)
 }
 

@@ -4,23 +4,12 @@ package pool
 
 import "sync"
 
-// Resettable — ограничение (constraint) для generic-параметра.
-// Любой тип T должен быть указателем и иметь метод Reset().
-// Запись *T означает, что мы работаем с указателем на T,
-// поэтому Get/Put возвращают и принимают *T.
-type Resettable interface {
-	Reset()
-}
-
 // Pool — типобезопасная обёртка над sync.Pool.
-// T — тип хранимого объекта; *T должен реализовывать Resettable,
-// то есть иметь метод Reset().
+// PT — тип хранимого объекта (как правило указатель), который должен
+// реализовывать метод Reset() для очистки состояния перед возвратом в пул.
 //
-// Пример: Pool[MyStruct], где *MyStruct имеет метод Reset().
-type Pool[T any, PT interface {
-	Resettable
-	*T
-}] struct {
+// Пример: Pool[*bytes.Buffer], где *bytes.Buffer имеет метод Reset().
+type Pool[PT interface{ Reset() }] struct {
 	// p — стандартный sync.Pool из стандартной библиотеки Go.
 	// Он хранит объекты как interface{}, поэтому нам нужна обёртка
 	// для сохранения типобезопасности.
@@ -28,13 +17,10 @@ type Pool[T any, PT interface {
 }
 
 // New создаёт и возвращает указатель на новый Pool.
-// Параметр newFn — фабричная функция, которая создаёт новый объект типа *T.
+// Параметр newFn — фабричная функция, которая создаёт новый объект типа PT.
 // sync.Pool вызывает её автоматически, когда пул пуст и нужен новый объект.
-func New[T any, PT interface {
-	Resettable
-	*T
-}](newFn func() PT) *Pool[T, PT] {
-	return &Pool[T, PT]{
+func New[PT interface{ Reset() }](newFn func() PT) *Pool[PT] {
+	return &Pool[PT]{
 		p: sync.Pool{
 			// New — поле sync.Pool; вызывается, когда Get() не нашёл объект в пуле.
 			New: func() any {
@@ -47,7 +33,7 @@ func New[T any, PT interface {
 // Get извлекает объект из пула и возвращает его.
 // Если пул пуст — вызывается фабричная функция, переданная в New.
 // Возвращаемый объект уже сброшен (Reset был вызван при Put).
-func (pool *Pool[T, PT]) Get() PT {
+func (pool *Pool[PT]) Get() PT {
 	// p.Get() возвращает any (interface{}), поэтому приводим к нужному типу PT.
 	return pool.p.Get().(PT)
 }
@@ -55,7 +41,7 @@ func (pool *Pool[T, PT]) Get() PT {
 // Put сбрасывает состояние объекта через Reset() и возвращает его в пул.
 // Сброс перед возвратом критически важен: следующий вызов Get()
 // должен получить «чистый» объект без данных от предыдущего использования.
-func (pool *Pool[T, PT]) Put(obj PT) {
+func (pool *Pool[PT]) Put(obj PT) {
 	// Сначала сбрасываем состояние объекта...
 	obj.Reset()
 	// ...затем кладём его обратно в sync.Pool для повторного использования.

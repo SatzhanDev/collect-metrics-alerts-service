@@ -207,12 +207,14 @@ func hasResetComment(doc *ast.CommentGroup) bool {
 	return false
 }
 
-// receiverName возвращает имя получателя метода — первая строчная буква имени типа.
+// receiverName возвращает имя получателя метода — полное имя типа в нижнем регистре.
+// Использование полного имени исключает коллизии, например Server и Storage
+// оба получали бы "s", теперь получат "server" и "storage".
 func receiverName(typeName string) string {
 	if typeName == "" {
-		return "s"
+		return "v"
 	}
-	return strings.ToLower(string(typeName[0]))
+	return strings.ToLower(typeName)
 }
 
 // generateFile создаёт файл reset.gen.go в директории пакета.
@@ -291,8 +293,10 @@ func fieldResetLine(qualified string, typ ast.Expr) string {
 			}
 		}
 		// Указатель на именованный/составной тип
+		// nil-check идёт первым: убеждаемся что объект существует,
+		// и только потом проверяем умеет ли он Reset().
 		return fmt.Sprintf(
-			"\tif resetter, ok := any(%s).(interface{ Reset() }); ok && %s != nil {\n\t\tresetter.Reset()\n\t}",
+			"\tif %s != nil {\n\t\tif resetter, ok := any(%s).(interface{ Reset() }); ok {\n\t\t\tresetter.Reset()\n\t\t}\n\t}",
 			qualified, qualified,
 		)
 

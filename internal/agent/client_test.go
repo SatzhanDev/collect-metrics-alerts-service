@@ -184,7 +184,7 @@ func TestHTTPSender_SendBatch_BadStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	sender := &HTTPSender{serverAddr: server.URL, key: ""}
+	sender := NewHTTPSender(server.URL, "")
 
 	value := 1.0
 	metrics := []models.Metrics{{ID: "cpu", MType: models.Gauge, Value: &value}}

@@ -15,13 +15,6 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/pool"
 )
 
-// bufPool — пул bytes.Buffer для повторного использования.
-// bytes.Buffer уже имеет метод Reset() в стандартной библиотеке,
-// поэтому он автоматически удовлетворяет интерфейсу Resettable.
-var bufPool = pool.New(func() *bytes.Buffer {
-	return &bytes.Buffer{}
-})
-
 type Sender interface {
 	SendGauge(name string, value float64) error
 	SendCounter(name string, value int64) error
@@ -33,12 +26,21 @@ type Sender interface {
 type HTTPSender struct {
 	serverAddr string
 	key        string
+	// bufPool — пул bytes.Buffer для повторного использования.
+	// Хранится как поле структуры (а не глобальная переменная),
+	// что позволяет подменять его в тестах и не создавать скрытых зависимостей.
+	bufPool *pool.Pool[*bytes.Buffer]
 }
 
 func NewHTTPSender(serverAddr string, key string) *HTTPSender {
 	return &HTTPSender{
 		serverAddr: serverAddr,
 		key:        key,
+		// bytes.Buffer уже имеет метод Reset() в стандартной библиотеке,
+		// поэтому он автоматически удовлетворяет ограничению Pool.
+		bufPool: pool.New(func() *bytes.Buffer {
+			return &bytes.Buffer{}
+		}),
 	}
 }
 
@@ -65,8 +67,8 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 	url := s.serverAddr + "/update"
 
 	// Берём buffer из пула вместо создания нового
-	buffer := bufPool.Get()
-	defer bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
+	buffer := s.bufPool.Get()
+	defer s.bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
 
 	req := models.Metrics{
 		ID:    name,
@@ -117,8 +119,8 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 	url := s.serverAddr + "/update"
 
 	// Берём buffer из пула вместо создания нового
-	buffer := bufPool.Get()
-	defer bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
+	buffer := s.bufPool.Get()
+	defer s.bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
 
 	req := models.Metrics{
 		ID:    name,
@@ -176,8 +178,8 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 		return err
 	}
 	// Берём buffer из пула вместо создания нового
-	buf := bufPool.Get()
-	defer bufPool.Put(buf) // Reset() вызовется автоматически при возврате
+	buf := s.bufPool.Get()
+	defer s.bufPool.Put(buf) // Reset() вызовется автоматически при возврате
 
 	gz := gzip.NewWriter(buf)
 	if _, err = gz.Write(body); err != nil {
