@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/cryptoutil"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/hashutil"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/pool"
@@ -26,22 +29,40 @@ type Sender interface {
 type HTTPSender struct {
 	serverAddr string
 	key        string
-	// bufPool — пул bytes.Buffer для повторного использования.
-	// Хранится как поле структуры (а не глобальная переменная),
-	// что позволяет подменять его в тестах и не создавать скрытых зависимостей.
-	bufPool *pool.Pool[*bytes.Buffer]
+	pubKey     *rsa.PublicKey
+	bufPool    *pool.Pool[*bytes.Buffer]
 }
 
 func NewHTTPSender(serverAddr string, key string) *HTTPSender {
 	return &HTTPSender{
 		serverAddr: serverAddr,
 		key:        key,
-		// bytes.Buffer уже имеет метод Reset() в стандартной библиотеке,
-		// поэтому он автоматически удовлетворяет ограничению Pool.
 		bufPool: pool.New(func() *bytes.Buffer {
 			return &bytes.Buffer{}
 		}),
 	}
+}
+
+// SetPublicKey задаёт публичный ключ RSA, которым будут шифроваться тела
+// запросов, отправляемых на сервер. Передача nil отключает шифрование.
+func (s *HTTPSender) SetPublicKey(pub *rsa.PublicKey) {
+	s.pubKey = pub
+}
+
+// bodyReader возвращает io.Reader для тела запроса: если публичный ключ
+// не задан, возвращается fallback (несжатые/неизменённые данные), иначе
+// payload шифруется публичным ключом и оборачивается в новый io.Reader.
+func (s *HTTPSender) bodyReader(payload []byte, fallback io.Reader) (io.Reader, error) {
+	if s.pubKey == nil {
+		return fallback, nil
+	}
+
+	encrypted, err := cryptoutil.Encrypt(s.pubKey, payload)
+	if err != nil {
+		return nil, fmt.Errorf("encrypt payload: %w", err)
+	}
+
+	return bytes.NewReader(encrypted), nil
 }
 
 func (s *HTTPSender) SendGauge(name string, value float64) error {
@@ -80,7 +101,12 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 		return err
 	}
 
-	response, err := http.Post(url, "application/json", buffer)
+	body, err := s.bodyReader(buffer.Bytes(), buffer)
+	if err != nil {
+		return err
+	}
+
+	response, err := http.Post(url, "application/json", body)
 	if err != nil {
 		return err
 	}
@@ -132,7 +158,12 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 		return err
 	}
 
-	resp, err := http.Post(url, "application/json", buffer)
+	body, err := s.bodyReader(buffer.Bytes(), buffer)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(url, "application/json", body)
 	if err != nil {
 		return err
 	}
@@ -189,11 +220,21 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 		return err
 	}
 
+	var hash string
+	if s.key != "" {
+		hash = hashutil.ComputeHash(buf.Bytes(), s.key)
+	}
+
+	reqBody, err := s.bodyReader(buf.Bytes(), buf)
+	if err != nil {
+		return err
+	}
+
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
 		s.serverAddr+"/updates/",
-		buf,
+		reqBody,
 	)
 	if err != nil {
 		return err
@@ -202,8 +243,7 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 
-	if s.key != "" {
-		hash := hashutil.ComputeHash(buf.Bytes(), s.key)
+	if hash != "" {
 		req.Header.Set("HashSHA256", hash)
 	}
 

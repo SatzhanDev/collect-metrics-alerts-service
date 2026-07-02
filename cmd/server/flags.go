@@ -31,6 +31,7 @@ func parseFlags() config.ServerConfig {
 	flag.StringVar(&cfg.Key, "k", "", "hash key")
 	flag.StringVar(&cfg.AuditFile, "audit-file", "", "audit file path")
 	flag.StringVar(&cfg.AuditURL, "audit-url", "", "audit receiver url")
+	flag.StringVar(&cfg.CryptoKey, "crypto-key", "", "path to private key file for asymmetric encryption")
 
 	flag.Parse()
 	cfg.StoreInterval = time.Duration(storeIntervalSec) * time.Second
@@ -70,6 +71,9 @@ func parseFlags() config.ServerConfig {
 	}
 	if v := os.Getenv("AUDIT_URL"); v != "" {
 		cfg.AuditURL = v
+	}
+	if v := os.Getenv("CRYPTO_KEY"); v != "" {
+		cfg.CryptoKey = v
 	}
 
 	return cfg
