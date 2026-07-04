@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/agent"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/buildinfo"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/cryptoutil"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 )
 
@@ -27,6 +29,15 @@ func main() {
 
 	storage := agent.NewMetricsStorage()
 	sender := agent.NewHTTPSender("http://"+cfg.Addr, cfg.Key)
+
+	if cfg.CryptoKey != "" {
+		pubKey, err := cryptoutil.LoadPublicKey(cfg.CryptoKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sender.SetPublicKey(pubKey)
+	}
+
 	a := agent.NewAgent(storage, sender, cfg.RateLimit)
 
 	a.StartWorkers(ctx, cfg.RateLimit)

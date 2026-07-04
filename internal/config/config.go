@@ -13,6 +13,7 @@ type ServerConfig struct {
 	Key             string
 	AuditFile       string
 	AuditURL        string
+	CryptoKey       string
 }
 
 type ClientConfig struct {
@@ -21,4 +22,5 @@ type ClientConfig struct {
 	PollInterval   time.Duration
 	RateLimit      int
 	Key            string
+	CryptoKey      string
 }

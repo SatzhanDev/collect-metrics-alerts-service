@@ -3,6 +3,8 @@ package agent
 import (
 	"compress/gzip"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -10,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/cryptoutil"
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -215,6 +218,43 @@ func TestHTTPSender_SendBatch_WithoutHashKey(t *testing.T) {
 	metrics := []models.Metrics{{ID: "x", MType: models.Gauge, Value: &value}}
 
 	err := sender.sendOnce(context.Background(), metrics)
+	require.NoError(t, err)
+}
+
+func TestHTTPSender_SendBatch_WithPublicKey(t *testing.T) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ciphertext, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		gzipped, err := cryptoutil.Decrypt(priv, ciphertext)
+		require.NoError(t, err)
+
+		gr, err := gzip.NewReader(strings.NewReader(string(gzipped)))
+		require.NoError(t, err)
+		defer gr.Close()
+
+		body, err := io.ReadAll(gr)
+		require.NoError(t, err)
+
+		var metrics []models.Metrics
+		require.NoError(t, json.Unmarshal(body, &metrics))
+		assert.Len(t, metrics, 1)
+		assert.Equal(t, "cpu", metrics[0].ID)
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewHTTPSender(server.URL, "")
+	sender.SetPublicKey(&priv.PublicKey)
+
+	value := 12.5
+	metrics := []models.Metrics{{ID: "cpu", MType: models.Gauge, Value: &value}}
+
+	err = sender.SendBatch(context.Background(), metrics)
 	require.NoError(t, err)
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/audit"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/buildinfo"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config/db"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/cryptoutil"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/middleware"
@@ -108,6 +110,16 @@ func main() {
 		}()
 	}
 
+	var privKey *rsa.PrivateKey
+	if cfg.CryptoKey != "" {
+		var err error
+		privKey, err = cryptoutil.LoadPrivateKey(cfg.CryptoKey)
+		if err != nil {
+			logger.Log.Error("failed to load private key", zap.Error(err))
+			log.Fatal(err)
+		}
+	}
+
 	auditPublisher := audit.NewPublisher(logger.Log)
 	if cfg.AuditFile != "" {
 		auditPublisher.Subscribe(audit.NewFileObserver(cfg.AuditFile))
@@ -119,6 +131,7 @@ func main() {
 	h := handler.NewMetricsHandler(svc, auditPublisher)
 
 	r := chi.NewRouter()
+	r.Use(middleware.CryptoMiddleware(privKey))
 	r.Use(middleware.HashValidationMiddleware(cfg.Key))
 	r.Use(middleware.GzipMiddleware)
 	r.Use(logger.WithLogging)
