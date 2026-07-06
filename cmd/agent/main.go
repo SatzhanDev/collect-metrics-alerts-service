@@ -25,7 +25,7 @@ func main() {
 	defer cancel()
 
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	storage := agent.NewMetricsStorage()
 	sender := agent.NewHTTPSender("http://"+cfg.Addr, cfg.Key)
@@ -40,7 +40,7 @@ func main() {
 
 	a := agent.NewAgent(storage, sender, cfg.RateLimit)
 
-	a.StartWorkers(ctx, cfg.RateLimit)
+	a.StartWorkers(context.Background(), cfg.RateLimit)
 	a.StartRuntimeCollector(ctx, cfg.PollInterval)
 	a.StartSystemCollector(ctx, cfg.PollInterval)
 
