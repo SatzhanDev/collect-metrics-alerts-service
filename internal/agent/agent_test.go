@@ -2,6 +2,9 @@ package agent
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
@@ -108,6 +111,58 @@ func TestAgent_Stop_NoWorkers(t *testing.T) {
 
 	// Stop без запущенных воркеров не должен паниковать
 	a.Stop()
+}
+
+func TestAgent_Stop_DeliversQueuedBatchAfterShutdownSignal(t *testing.T) {
+	var received int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&received, 1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewHTTPSender(server.URL, "")
+	st := NewMetricsStorage()
+	a := NewAgent(st, sender, 1)
+
+	// Как в исправленном cmd/agent/main.go: воркеры отправляют через отдельный,
+	// не отменяемый контекст, а не через тот, что отменяется по сигналу
+	// завершения — иначе уже поставленный в очередь батч не смог бы уйти.
+	a.StartWorkers(context.Background(), 1)
+
+	value := 1.0
+	batch := []models.Metrics{{ID: "cpu", MType: models.Gauge, Value: &value}}
+	a.jobs <- batch
+
+	// Имитируем получение сигнала завершения: Stop() ждёт продюсеров (их нет),
+	// закрывает канал jobs и ждёт, пока воркер дошлёт уже поставленный батч.
+	a.Stop()
+
+	assert.Equal(t, int32(1), atomic.LoadInt32(&received))
+}
+
+func TestSendBatch_FailsWithAlreadyCanceledContext(t *testing.T) {
+	// Показывает, почему воркерам нельзя передавать отменяемый контекст:
+	// если контекст уже отменён (как ctx после cancel() в main.go при
+	// получении сигнала), запрос не уйдёт вообще — сразу вернётся ошибка.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	sender := NewHTTPSender(server.URL, "")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // отменяем контекст ДО отправки — как если бы shutdown уже начался
+
+	value := 1.0
+	metrics := []models.Metrics{{ID: "cpu", MType: models.Gauge, Value: &value}}
+
+	// sendOnce вместо SendBatch, чтобы не ждать retry-задержки: ошибка
+	// "context canceled" не исчезнет ни на одной попытке.
+	err := sender.sendOnce(ctx, metrics)
+	require.Error(t, err)
 }
 
 func TestAgent_CollectSystemBatch(t *testing.T) {

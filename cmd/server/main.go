@@ -103,9 +103,11 @@ func main() {
 			defer ticker.Stop()
 
 			for range ticker.C {
-				if err := svc.SaveToFile(context.Background()); err != nil {
+				saveCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				if err := svc.SaveToFile(saveCtx); err != nil {
 					logger.Log.Error("failed to save metrics to file", zap.Error(err))
 				}
+				cancel()
 			}
 		}()
 	}
@@ -159,7 +161,7 @@ func main() {
 	}
 
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	go func() {
 		logger.Log.Info("Running server", zap.String("address", cfg.Addr))
@@ -174,8 +176,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Log.Error("server shutdown error", zap.Error(err))
+	}
+
 	if fileStorage != nil {
-		if err := svc.SaveToFile(ctx); err != nil {
+		saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := svc.SaveToFile(saveCtx)
+		saveCancel()
+		if err != nil {
 			logger.Log.Error("failed to save metrics on shutdown", zap.Error(err))
 		}
 	}
@@ -184,10 +193,6 @@ func main() {
 		if err := dbConn.Close(); err != nil {
 			logger.Log.Error("failed to close db connection", zap.Error(err))
 		}
-	}
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Log.Error("server shutdown error", zap.Error(err))
 	}
 
 	logger.Log.Info("Server stopped")
