@@ -40,7 +40,10 @@ func main() {
 
 	a := agent.NewAgent(storage, sender, cfg.RateLimit)
 
-	a.StartWorkers(context.Background(), cfg.RateLimit)
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+
+	a.StartWorkers(workerCtx, cfg.RateLimit)
 	a.StartRuntimeCollector(ctx, cfg.PollInterval)
 	a.StartSystemCollector(ctx, cfg.PollInterval)
 
@@ -49,6 +52,7 @@ func main() {
 
 	cancel()
 	a.Stop()
+	workerCancel()
 
 	logger.Log.Info("graceful shutdown complete")
 

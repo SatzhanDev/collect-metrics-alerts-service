@@ -103,9 +103,11 @@ func main() {
 			defer ticker.Stop()
 
 			for range ticker.C {
-				if err := svc.SaveToFile(context.Background()); err != nil {
+				saveCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				if err := svc.SaveToFile(saveCtx); err != nil {
 					logger.Log.Error("failed to save metrics to file", zap.Error(err))
 				}
+				cancel()
 			}
 		}()
 	}
@@ -179,7 +181,10 @@ func main() {
 	}
 
 	if fileStorage != nil {
-		if err := svc.SaveToFile(context.Background()); err != nil {
+		saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := svc.SaveToFile(saveCtx)
+		saveCancel()
+		if err != nil {
 			logger.Log.Error("failed to save metrics on shutdown", zap.Error(err))
 		}
 	}
