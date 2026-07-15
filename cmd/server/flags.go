@@ -33,6 +33,7 @@ func parseFlags() config.ServerConfig {
 	flag.StringVar(&cfg.AuditFile, "audit-file", "", "audit file path")
 	flag.StringVar(&cfg.AuditURL, "audit-url", "", "audit receiver url")
 	flag.StringVar(&cfg.CryptoKey, "crypto-key", "", "path to private key file for asymmetric encryption")
+	flag.StringVar(&cfg.TrustedSubnet, "t", "", "trusted subnet in CIDR notation")
 	flag.StringVar(&configPath, "c", "", "path to JSON config file")
 	flag.StringVar(&configPath, "config", "", "path to JSON config file (alias for -c)")
 
@@ -86,6 +87,9 @@ func parseFlags() config.ServerConfig {
 	if v := os.Getenv("CRYPTO_KEY"); v != "" {
 		cfg.CryptoKey = v
 	}
+	if v := os.Getenv("TRUSTED_SUBNET"); v != "" {
+		cfg.TrustedSubnet = v
+	}
 	if v := os.Getenv("CONFIG"); v != "" {
 		configPath = v
 	}
@@ -122,4 +126,5 @@ func applyServerFileConfig(cfg *config.ServerConfig, file *config.ServerFileConf
 	config.MergeField(explicitFlags, "AUDIT_FILE", "audit-file", file.AuditFile, func(v string) { cfg.AuditFile = v })
 	config.MergeField(explicitFlags, "AUDIT_URL", "audit-url", file.AuditURL, func(v string) { cfg.AuditURL = v })
 	config.MergeField(explicitFlags, "CRYPTO_KEY", "crypto-key", file.CryptoKey, func(v string) { cfg.CryptoKey = v })
+	config.MergeField(explicitFlags, "TRUSTED_SUBNET", "t", file.TrustedSubnet, func(v string) { cfg.TrustedSubnet = v })
 }

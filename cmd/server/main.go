@@ -132,7 +132,14 @@ func main() {
 
 	h := handler.NewMetricsHandler(svc, auditPublisher)
 
+	trustedSubnetMiddleware, err := middleware.TrustedSubnetMiddleware(cfg.TrustedSubnet)
+	if err != nil {
+		logger.Log.Error("invalid trusted subnet", zap.Error(err))
+		log.Fatal(err)
+	}
+
 	r := chi.NewRouter()
+	r.Use(trustedSubnetMiddleware)
 	r.Use(middleware.CryptoMiddleware(privKey))
 	r.Use(middleware.HashValidationMiddleware(cfg.Key))
 	r.Use(middleware.GzipMiddleware)

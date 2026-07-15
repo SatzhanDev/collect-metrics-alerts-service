@@ -14,6 +14,7 @@ type ServerConfig struct {
 	AuditFile       string
 	AuditURL        string
 	CryptoKey       string
+	TrustedSubnet   string
 }
 
 type ClientConfig struct {

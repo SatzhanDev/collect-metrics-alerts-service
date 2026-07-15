@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,6 +18,28 @@ import (
 	models "github.com/SatzhanDev/collect-metrics-alerts-service/internal/models"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/pool"
 )
+
+// outboundIP определяет IP-адрес хоста агента, который будет отправляться
+// серверу в заголовке X-Real-IP, чтобы тот мог проверить принадлежность
+// агента доверенной подсети. Используется трюк с "подключением" по UDP:
+// реальные пакеты при этом не отправляются, ядро только выбирает локальный
+// адрес интерфейса, через который прошёл бы трафик к указанному хосту.
+// Если определить адрес не удалось (например, нет сети), возвращается
+// пустая строка — заголовок в этом случае просто не будет добавлен.
+func outboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return ""
+	}
+	defer conn.Close()
+
+	localAddr, ok := conn.LocalAddr().(*net.UDPAddr)
+	if !ok {
+		return ""
+	}
+
+	return localAddr.IP.String()
+}
 
 type Sender interface {
 	SendGauge(name string, value float64) error
@@ -31,6 +54,7 @@ type HTTPSender struct {
 	key        string
 	pubKey     *rsa.PublicKey
 	bufPool    *pool.Pool[*bytes.Buffer]
+	realIP     string
 }
 
 func NewHTTPSender(serverAddr string, key string) *HTTPSender {
@@ -40,6 +64,7 @@ func NewHTTPSender(serverAddr string, key string) *HTTPSender {
 		bufPool: pool.New(func() *bytes.Buffer {
 			return &bytes.Buffer{}
 		}),
+		realIP: outboundIP(),
 	}
 }
 
@@ -65,12 +90,28 @@ func (s *HTTPSender) bodyReader(payload []byte, fallback io.Reader) (io.Reader, 
 	return bytes.NewReader(encrypted), nil
 }
 
+// setRealIP выставляет заголовок X-Real-IP с адресом хоста агента, если
+// его удалось определить. Сервер использует этот заголовок, чтобы
+// проверить принадлежность агента доверенной подсети.
+func (s *HTTPSender) setRealIP(req *http.Request) {
+	if s.realIP != "" {
+		req.Header.Set("X-Real-IP", s.realIP)
+	}
+}
+
 func (s *HTTPSender) SendGauge(name string, value float64) error {
 	valueStr := strconv.FormatFloat(value, 'f', -1, 64)
 
 	url := fmt.Sprintf("%s/update/gauge/%s/%s", s.serverAddr, name, valueStr)
 
-	response, err := http.Post(url, "text/plain", nil)
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "text/plain")
+	s.setRealIP(req)
+
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -91,13 +132,13 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 	buffer := s.bufPool.Get()
 	defer s.bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
 
-	req := models.Metrics{
+	metric := models.Metrics{
 		ID:    name,
 		MType: models.Gauge,
 		Value: &value,
 	}
 
-	if err := json.NewEncoder(buffer).Encode(req); err != nil {
+	if err := json.NewEncoder(buffer).Encode(metric); err != nil {
 		return err
 	}
 
@@ -106,7 +147,14 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 		return err
 	}
 
-	response, err := http.Post(url, "application/json", body)
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	s.setRealIP(req)
+
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -129,7 +177,14 @@ func (s *HTTPSender) SendCounter(name string, value int64) error {
 		valueStr,
 	)
 
-	resp, err := http.Post(url, "text/plain", nil)
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "text/plain")
+	s.setRealIP(req)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -148,13 +203,13 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 	buffer := s.bufPool.Get()
 	defer s.bufPool.Put(buffer) // Reset() вызовется автоматически при возврате
 
-	req := models.Metrics{
+	metric := models.Metrics{
 		ID:    name,
 		MType: models.Counter,
 		Delta: &value,
 	}
 
-	if err := json.NewEncoder(buffer).Encode(req); err != nil {
+	if err := json.NewEncoder(buffer).Encode(metric); err != nil {
 		return err
 	}
 
@@ -163,7 +218,14 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 		return err
 	}
 
-	resp, err := http.Post(url, "application/json", body)
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	s.setRealIP(req)
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -242,6 +304,7 @@ func (s *HTTPSender) sendOnce(ctx context.Context, metrics []models.Metrics) err
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	s.setRealIP(req)
 
 	if hash != "" {
 		req.Header.Set("HashSHA256", hash)

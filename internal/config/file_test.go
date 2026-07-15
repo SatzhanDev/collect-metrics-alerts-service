@@ -19,7 +19,8 @@ func TestLoadServerFileConfig(t *testing.T) {
 		"log_level": "debug",
 		"hash_key": "secret",
 		"audit_file": "/tmp/audit.log",
-		"audit_url": "http://localhost/audit"
+		"audit_url": "http://localhost/audit",
+		"trusted_subnet": "192.168.1.0/24"
 	}`
 
 	path := filepath.Join(t.TempDir(), "server.json")
@@ -38,6 +39,7 @@ func TestLoadServerFileConfig(t *testing.T) {
 	require.Equal(t, "secret", *cfg.HashKey)
 	require.Equal(t, "/tmp/audit.log", *cfg.AuditFile)
 	require.Equal(t, "http://localhost/audit", *cfg.AuditURL)
+	require.Equal(t, "192.168.1.0/24", *cfg.TrustedSubnet)
 }
 
 func TestLoadServerFileConfig_MissingFieldsStayNil(t *testing.T) {
@@ -53,6 +55,7 @@ func TestLoadServerFileConfig_MissingFieldsStayNil(t *testing.T) {
 	require.Nil(t, cfg.StoreFile)
 	require.Nil(t, cfg.DatabaseDSN)
 	require.Nil(t, cfg.CryptoKey)
+	require.Nil(t, cfg.TrustedSubnet)
 }
 
 func TestLoadServerFileConfig_FileNotFound(t *testing.T) {
