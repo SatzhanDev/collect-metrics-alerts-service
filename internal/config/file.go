@@ -6,10 +6,6 @@ import (
 	"os"
 )
 
-// ServerFileConfig описывает опции сервера, которые можно задать через
-// JSON-файл конфигурации (флаг -c/-config или переменная окружения CONFIG).
-// Поля — указатели, чтобы отличить "поле отсутствует в файле" от
-// "поле явно задано нулевым значением" (например, пустой строкой или false).
 type ServerFileConfig struct {
 	Address       *string `json:"address"`
 	Restore       *bool   `json:"restore"`
@@ -21,10 +17,9 @@ type ServerFileConfig struct {
 	HashKey       *string `json:"hash_key"`
 	AuditFile     *string `json:"audit_file"`
 	AuditURL      *string `json:"audit_url"`
+	TrustedSubnet *string `json:"trusted_subnet"`
 }
 
-// ClientFileConfig описывает опции агента, которые можно задать через
-// JSON-файл конфигурации (флаг -c/-config или переменная окружения CONFIG).
 type ClientFileConfig struct {
 	Address        *string `json:"address"`
 	ReportInterval *string `json:"report_interval"`
