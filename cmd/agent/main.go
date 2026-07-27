@@ -28,14 +28,28 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	storage := agent.NewMetricsStorage()
-	sender := agent.NewHTTPSender("http://"+cfg.Addr, cfg.Key)
 
-	if cfg.CryptoKey != "" {
-		pubKey, err := cryptoutil.LoadPublicKey(cfg.CryptoKey)
+	var sender agent.Sender
+
+	if cfg.GRPCAddr != "" {
+		grpcSender, err := agent.NewGRPCSender(cfg.GRPCAddr)
 		if err != nil {
 			log.Fatal(err)
 		}
-		sender.SetPublicKey(pubKey)
+		defer grpcSender.Close()
+		sender = grpcSender
+	} else {
+		httpSender := agent.NewHTTPSender("http://"+cfg.Addr, cfg.Key)
+
+		if cfg.CryptoKey != "" {
+			pubKey, err := cryptoutil.LoadPublicKey(cfg.CryptoKey)
+			if err != nil {
+				log.Fatal(err)
+			}
+			httpSender.SetPublicKey(pubKey)
+		}
+
+		sender = httpSender
 	}
 
 	a := agent.NewAgent(storage, sender, cfg.RateLimit)

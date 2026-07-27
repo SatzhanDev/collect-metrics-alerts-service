@@ -19,6 +19,7 @@ func parseFlags() config.ClientConfig {
 	)
 
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "server address")
+	flag.StringVar(&cfg.GRPCAddr, "ga", "", "gRPC server address (if set, agent uses gRPC instead of HTTP)")
 	flag.IntVar(&reportIntervalSec, "r", 10, "report interval in seconds")
 	flag.IntVar(&pollIntervalSec, "p", 2, "poll interval in seconds")
 	flag.StringVar(&cfg.Key, "k", "", "hash key")
@@ -35,6 +36,9 @@ func parseFlags() config.ClientConfig {
 
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
 		cfg.Addr = envAddr
+	}
+	if envGRPCAddr := os.Getenv("GRPC_ADDRESS"); envGRPCAddr != "" {
+		cfg.GRPCAddr = envGRPCAddr
 	}
 
 	if envReport := os.Getenv("REPORT_INTERVAL"); envReport != "" {
@@ -82,6 +86,7 @@ func parseFlags() config.ClientConfig {
 
 func applyClientFileConfig(cfg *config.ClientConfig, file *config.ClientFileConfig, explicitFlags map[string]bool) {
 	config.MergeField(explicitFlags, "ADDRESS", "a", file.Address, func(v string) { cfg.Addr = v })
+	config.MergeField(explicitFlags, "GRPC_ADDRESS", "ga", file.GRPCAddress, func(v string) { cfg.GRPCAddr = v })
 
 	config.MergeField(explicitFlags, "REPORT_INTERVAL", "r", file.ReportInterval, func(v string) {
 		d, err := time.ParseDuration(v)

@@ -20,9 +20,11 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/buildinfo"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config/db"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/cryptoutil"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/grpcserver"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/middleware"
+	pb "github.com/SatzhanDev/collect-metrics-alerts-service/internal/proto"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/file"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/mem"
@@ -30,6 +32,7 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -161,6 +164,34 @@ func main() {
 
 	r.Get("/ping", h.Ping)
 
+	// gRPC-сервер поднимается параллельно с HTTP, в отдельной горутине —
+	// по тому же принципу, что и pprof-сервер выше. Работает поверх того
+	// же svc, что и HTTP-хендлеры, поэтому данные общие для обоих транспортов.
+	var grpcServer *grpc.Server
+	if cfg.GRPCAddr != "" {
+		grpcInterceptor, err := middleware.GRPCTrustedSubnetInterceptor(cfg.TrustedSubnet)
+		if err != nil {
+			logger.Log.Error("invalid trusted subnet for grpc", zap.Error(err))
+			log.Fatal(err)
+		}
+
+		grpcServer = grpc.NewServer(grpc.UnaryInterceptor(grpcInterceptor))
+		pb.RegisterMetricsServer(grpcServer, grpcserver.NewMetricsServer(svc))
+
+		grpcLis, err := net.Listen("tcp", cfg.GRPCAddr)
+		if err != nil {
+			logger.Log.Error("failed to listen grpc port", zap.Error(err))
+			log.Fatal(err)
+		}
+
+		go func() {
+			logger.Log.Info("Running gRPC server", zap.String("address", cfg.GRPCAddr))
+			if err := grpcServer.Serve(grpcLis); err != nil {
+				logger.Log.Error("grpc server error", zap.Error(err))
+			}
+		}()
+	}
+
 	addr := normalizeAddr(cfg.Addr)
 	srv := &http.Server{
 		Addr:    addr,
@@ -185,6 +216,10 @@ func main() {
 
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Log.Error("server shutdown error", zap.Error(err))
+	}
+
+	if grpcServer != nil {
+		grpcServer.GracefulStop()
 	}
 
 	if fileStorage != nil {

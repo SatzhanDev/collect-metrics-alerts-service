@@ -8,6 +8,7 @@ import (
 
 type ServerFileConfig struct {
 	Address       *string `json:"address"`
+	GRPCAddress   *string `json:"grpc_address"`
 	Restore       *bool   `json:"restore"`
 	StoreInterval *string `json:"store_interval"`
 	StoreFile     *string `json:"store_file"`
@@ -22,6 +23,7 @@ type ServerFileConfig struct {
 
 type ClientFileConfig struct {
 	Address        *string `json:"address"`
+	GRPCAddress    *string `json:"grpc_address"`
 	ReportInterval *string `json:"report_interval"`
 	PollInterval   *string `json:"poll_interval"`
 	CryptoKey      *string `json:"crypto_key"`
