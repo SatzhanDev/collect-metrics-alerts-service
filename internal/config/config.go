@@ -5,6 +5,7 @@ import "time"
 
 type ServerConfig struct {
 	Addr            string
+	GRPCAddr        string
 	LogLevel        string
 	FileStoragePath string
 	StoreInterval   time.Duration
@@ -19,6 +20,7 @@ type ServerConfig struct {
 
 type ClientConfig struct {
 	Addr           string
+	GRPCAddr       string
 	ReportInterval time.Duration
 	PollInterval   time.Duration
 	RateLimit      int

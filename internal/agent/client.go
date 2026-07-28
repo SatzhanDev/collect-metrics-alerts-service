@@ -42,10 +42,10 @@ func outboundIP() string {
 }
 
 type Sender interface {
-	SendGauge(name string, value float64) error
-	SendCounter(name string, value int64) error
-	SendGaugeJSON(name string, value float64) error
-	SendCounterJSON(name string, value int64) error
+	SendGauge(ctx context.Context, name string, value float64) error
+	SendCounter(ctx context.Context, name string, value int64) error
+	SendGaugeJSON(ctx context.Context, name string, value float64) error
+	SendCounterJSON(ctx context.Context, name string, value int64) error
 	SendBatch(ctx context.Context, metrics []models.Metrics) error
 }
 
@@ -99,12 +99,12 @@ func (s *HTTPSender) setRealIP(req *http.Request) {
 	}
 }
 
-func (s *HTTPSender) SendGauge(name string, value float64) error {
+func (s *HTTPSender) SendGauge(ctx context.Context, name string, value float64) error {
 	valueStr := strconv.FormatFloat(value, 'f', -1, 64)
 
 	url := fmt.Sprintf("%s/update/gauge/%s/%s", s.serverAddr, name, valueStr)
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (s *HTTPSender) SendGauge(name string, value float64) error {
 
 	return nil
 }
-func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
+func (s *HTTPSender) SendGaugeJSON(ctx context.Context, name string, value float64) error {
 
 	url := s.serverAddr + "/update"
 
@@ -147,7 +147,7 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (s *HTTPSender) SendGaugeJSON(name string, value float64) error {
 	return nil
 }
 
-func (s *HTTPSender) SendCounter(name string, value int64) error {
+func (s *HTTPSender) SendCounter(ctx context.Context, name string, value int64) error {
 	valueStr := strconv.FormatInt(value, 10)
 
 	url := fmt.Sprintf("%s/update/counter/%s/%s",
@@ -177,7 +177,7 @@ func (s *HTTPSender) SendCounter(name string, value int64) error {
 		valueStr,
 	)
 
-	req, err := http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (s *HTTPSender) SendCounter(name string, value int64) error {
 
 	return nil
 }
-func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
+func (s *HTTPSender) SendCounterJSON(ctx context.Context, name string, value int64) error {
 	url := s.serverAddr + "/update"
 
 	// Берём buffer из пула вместо создания нового
@@ -218,7 +218,7 @@ func (s *HTTPSender) SendCounterJSON(name string, value int64) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 	if err != nil {
 		return err
 	}

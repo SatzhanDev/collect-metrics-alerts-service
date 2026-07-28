@@ -24,21 +24,21 @@ func NewMockSender() *MockSender {
 	}
 }
 
-func (m *MockSender) SendGauge(name string, value float64) error {
+func (m *MockSender) SendGauge(ctx context.Context, name string, value float64) error {
 	m.gauges[name] = value
 	return nil
 }
 
-func (m *MockSender) SendCounter(name string, value int64) error {
+func (m *MockSender) SendCounter(ctx context.Context, name string, value int64) error {
 	m.counters[name] = value
 	return nil
 }
-func (m *MockSender) SendGaugeJSON(name string, value float64) error {
+func (m *MockSender) SendGaugeJSON(ctx context.Context, name string, value float64) error {
 	m.gauges[name] = value
 	return nil
 }
 
-func (m *MockSender) SendCounterJSON(name string, value int64) error {
+func (m *MockSender) SendCounterJSON(ctx context.Context, name string, value int64) error {
 	m.counters[name] = value
 	return nil
 }

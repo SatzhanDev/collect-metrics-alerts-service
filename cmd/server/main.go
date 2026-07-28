@@ -20,9 +20,11 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/buildinfo"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/config/db"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/cryptoutil"
+	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/grpcserver"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/handler"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/logger"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/middleware"
+	pb "github.com/SatzhanDev/collect-metrics-alerts-service/internal/proto"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/file"
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/repository/mem"
@@ -30,6 +32,8 @@ import (
 	"github.com/SatzhanDev/collect-metrics-alerts-service/internal/service"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -161,30 +165,75 @@ func main() {
 
 	r.Get("/ping", h.Ping)
 
+	g, gCtx := errgroup.WithContext(context.Background())
+
+	var grpcServer *grpc.Server
+	if cfg.GRPCAddr != "" {
+		grpcInterceptor, err := middleware.GRPCTrustedSubnetInterceptor(cfg.TrustedSubnet)
+		if err != nil {
+			logger.Log.Error("invalid trusted subnet for grpc", zap.Error(err))
+			log.Fatal(err)
+		}
+
+		grpcServer = grpc.NewServer(grpc.UnaryInterceptor(grpcInterceptor))
+		pb.RegisterMetricsServer(grpcServer, grpcserver.NewMetricsServer(svc))
+
+		grpcLis, err := net.Listen("tcp", cfg.GRPCAddr)
+		if err != nil {
+			logger.Log.Error("failed to listen grpc port", zap.Error(err))
+			log.Fatal(err)
+		}
+
+		g.Go(func() error {
+			logger.Log.Info("Running gRPC server", zap.String("address", cfg.GRPCAddr))
+			if err := grpcServer.Serve(grpcLis); err != nil {
+				return fmt.Errorf("grpc server: %w", err)
+			}
+			return nil
+		})
+	}
+
 	addr := normalizeAddr(cfg.Addr)
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: r,
 	}
 
+	g.Go(func() error {
+		logger.Log.Info("Running server", zap.String("address", cfg.Addr))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("http server: %w", err)
+		}
+		return nil
+	})
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
-	go func() {
-		logger.Log.Info("Running server", zap.String("address", cfg.Addr))
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err)
+	g.Go(func() error {
+		select {
+		case <-quit:
+			logger.Log.Info("Shutting down server...")
+		case <-gCtx.Done():
+			logger.Log.Error("server failed, shutting down", zap.Error(context.Cause(gCtx)))
 		}
-	}()
 
-	<-quit
-	logger.Log.Info("Shutting down server...")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logger.Log.Error("server shutdown error", zap.Error(err))
+		}
 
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Log.Error("server shutdown error", zap.Error(err))
+		if grpcServer != nil {
+			grpcServer.GracefulStop()
+		}
+
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		logger.Log.Error("server group finished with error", zap.Error(err))
 	}
 
 	if fileStorage != nil {

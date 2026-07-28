@@ -24,6 +24,7 @@ func parseFlags() config.ServerConfig {
 	)
 
 	flag.StringVar(&cfg.Addr, "a", "localhost:8080", "HTTP server address")
+	flag.StringVar(&cfg.GRPCAddr, "ga", "", "gRPC server address (empty disables gRPC)")
 	flag.StringVar(&cfg.LogLevel, "l", "info", "log level")
 	flag.IntVar(&storeIntervalSec, "i", 300, "store interval in seconds")
 	flag.StringVar(&cfg.FileStoragePath, "f", "", "file storage path")
@@ -50,6 +51,9 @@ func parseFlags() config.ServerConfig {
 
 	if envAddr := os.Getenv("ADDRESS"); envAddr != "" {
 		cfg.Addr = envAddr
+	}
+	if envGRPCAddr := os.Getenv("GRPC_ADDRESS"); envGRPCAddr != "" {
+		cfg.GRPCAddr = envGRPCAddr
 	}
 	if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" {
 		cfg.LogLevel = envLogLevel
@@ -109,6 +113,7 @@ func parseFlags() config.ServerConfig {
 // туда, где опция не была явно задана ни флагом, ни переменной окружения
 func applyServerFileConfig(cfg *config.ServerConfig, file *config.ServerFileConfig, explicitFlags map[string]bool) {
 	config.MergeField(explicitFlags, "ADDRESS", "a", file.Address, func(v string) { cfg.Addr = v })
+	config.MergeField(explicitFlags, "GRPC_ADDRESS", "ga", file.GRPCAddress, func(v string) { cfg.GRPCAddr = v })
 	config.MergeField(explicitFlags, "LOG_LEVEL", "l", file.LogLevel, func(v string) { cfg.LogLevel = v })
 
 	config.MergeField(explicitFlags, "STORE_INTERVAL", "i", file.StoreInterval, func(v string) {
