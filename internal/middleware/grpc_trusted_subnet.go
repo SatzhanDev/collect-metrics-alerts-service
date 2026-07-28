@@ -24,10 +24,10 @@ func GRPCTrustedSubnetInterceptor(trustedSubnet string) (grpc.UnaryServerInterce
 
 	return func(
 		ctx context.Context,
-		req interface{},
+		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (interface{}, error) {
+	) (any, error) {
 		if subnet == nil {
 			return handler(ctx, req)
 		}

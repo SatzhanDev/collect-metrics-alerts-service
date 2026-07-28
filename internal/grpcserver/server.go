@@ -44,7 +44,7 @@ func (s *MetricsServer) UpdateMetrics(ctx context.Context, req *pb.UpdateMetrics
 	}
 
 	if err := s.svc.UpdateBatch(ctx, batch); err != nil {
-		logger.Log.Error("grpc: update batch failed", zap.Error(err))
+		logger.Log.Error("update batch failed", zap.String("component", "grpc"), zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to update metrics")
 	}
 

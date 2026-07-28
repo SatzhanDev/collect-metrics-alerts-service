@@ -27,7 +27,7 @@ func TestHTTPSender_SendGauge_Success(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendGauge("cpu", 12.5)
+	err := sender.SendGauge(context.Background(), "cpu", 12.5)
 	require.NoError(t, err)
 }
 
@@ -38,7 +38,7 @@ func TestHTTPSender_SendGauge_ServerError(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendGauge("cpu", 12.5)
+	err := sender.SendGauge(context.Background(), "cpu", 12.5)
 	require.Error(t, err)
 }
 
@@ -54,7 +54,7 @@ func TestHTTPSender_SendGaugeJSON_Success(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendGaugeJSON("cpu", 12.5)
+	err := sender.SendGaugeJSON(context.Background(), "cpu", 12.5)
 	require.NoError(t, err)
 }
 
@@ -65,7 +65,7 @@ func TestHTTPSender_SendGaugeJSON_ServerError(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendGaugeJSON("cpu", 99.9)
+	err := sender.SendGaugeJSON(context.Background(), "cpu", 99.9)
 	require.Error(t, err)
 }
 
@@ -78,7 +78,7 @@ func TestHTTPSender_SendCounter_Success(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendCounter("PollCount", 5)
+	err := sender.SendCounter(context.Background(), "PollCount", 5)
 	require.NoError(t, err)
 }
 
@@ -89,7 +89,7 @@ func TestHTTPSender_SendCounter_ServerError(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendCounter("PollCount", 5)
+	err := sender.SendCounter(context.Background(), "PollCount", 5)
 	require.Error(t, err)
 }
 
@@ -105,7 +105,7 @@ func TestHTTPSender_SendCounterJSON_Success(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendCounterJSON("PollCount", 5)
+	err := sender.SendCounterJSON(context.Background(), "PollCount", 5)
 	require.NoError(t, err)
 }
 
@@ -116,7 +116,7 @@ func TestHTTPSender_SendCounterJSON_ServerError(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendCounterJSON("PollCount", 1)
+	err := sender.SendCounterJSON(context.Background(), "PollCount", 1)
 	require.Error(t, err)
 }
 
@@ -201,7 +201,7 @@ func TestHTTPSender_SendBatch_BadStatus(t *testing.T) {
 func TestHTTPSender_SendGauge_NoSchemeURL(t *testing.T) {
 	// Пустой адрес → URL без схемы → ошибка "unsupported protocol scheme"
 	sender := NewHTTPSender("", "")
-	err := sender.SendGauge("cpu", 1.0)
+	err := sender.SendGauge(context.Background(), "cpu", 1.0)
 	require.Error(t, err)
 }
 
@@ -266,6 +266,6 @@ func TestHTTPSender_SendGaugeJSON_URL(t *testing.T) {
 	defer server.Close()
 
 	sender := NewHTTPSender(server.URL, "")
-	err := sender.SendGaugeJSON("mem", 256.0)
+	err := sender.SendGaugeJSON(context.Background(), "mem", 256.0)
 	require.NoError(t, err)
 }

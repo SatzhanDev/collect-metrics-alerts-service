@@ -84,20 +84,20 @@ func (s *GRPCSender) SendBatch(ctx context.Context, metrics []models.Metrics) er
 	return s.send(ctx, metrics)
 }
 
-func (s *GRPCSender) SendGauge(name string, value float64) error {
+func (s *GRPCSender) SendGauge(ctx context.Context, name string, value float64) error {
 	v := value
-	return s.send(context.Background(), []models.Metrics{{ID: name, MType: models.Gauge, Value: &v}})
+	return s.send(ctx, []models.Metrics{{ID: name, MType: models.Gauge, Value: &v}})
 }
 
-func (s *GRPCSender) SendCounter(name string, value int64) error {
+func (s *GRPCSender) SendCounter(ctx context.Context, name string, value int64) error {
 	d := value
-	return s.send(context.Background(), []models.Metrics{{ID: name, MType: models.Counter, Delta: &d}})
+	return s.send(ctx, []models.Metrics{{ID: name, MType: models.Counter, Delta: &d}})
 }
 
-func (s *GRPCSender) SendGaugeJSON(name string, value float64) error {
-	return s.SendGauge(name, value)
+func (s *GRPCSender) SendGaugeJSON(ctx context.Context, name string, value float64) error {
+	return s.SendGauge(ctx, name, value)
 }
 
-func (s *GRPCSender) SendCounterJSON(name string, value int64) error {
-	return s.SendCounter(name, value)
+func (s *GRPCSender) SendCounterJSON(ctx context.Context, name string, value int64) error {
+	return s.SendCounter(ctx, name, value)
 }
